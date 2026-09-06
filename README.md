@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nexus Workspace
 
-## Getting Started
+Nexus Workspace is a modern team workspace and project management platform built to organize projects, tasks, team members, and activity in one place.
 
-First, run the development server:
+This project is being developed incrementally as a full-stack portfolio project, with a focus on clean architecture, real-world workflows, and production-ready practices.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Current Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- Responsive dashboard shell
+- Sidebar navigation
+- Workspace topbar
+- Project statistics
+- Active projects overview
+- Progress tracking
+- Recent activity feed
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Planned Features
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Authentication
+- User accounts and profiles
+- Team workspaces
+- Project management
+- Task management
+- Roles and permissions
+- Database integration
+- API routes
+- Notifications
+- Search and filtering
+- Analytics
+- Activity logs
+- Deployment and production configuration
 
-## Learn More
+## Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- Node.js
+- Database and authentication tools will be added as the project evolves
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Status
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Currently under active development.
 
-## Deploy on Vercel
+## Goal
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The goal of Nexus Workspace is to build a complete full-stack SaaS-style application while demonstrating practical skills in frontend architecture, backend development, APIs, authentication, databases, and deployment.
