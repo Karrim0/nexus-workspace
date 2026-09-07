@@ -1,12 +1,19 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 const navigation = [
-  { label: "Overview", active: true },
-  { label: "Projects", active: false },
-  { label: "My Tasks", active: false },
-  { label: "Team", active: false },
-  { label: "Activity", active: false },
+  { label: "Overview", href: "/dashboard" },
+  { label: "Projects", href: "/projects" },
+  { label: "My Tasks", href: "/tasks" },
+  { label: "Team", href: "/team" },
+  { label: "Activity", href: "/activity" },
 ];
 
 export function Sidebar() {
+  const pathname = usePathname();
+
   return (
     <aside className="hidden min-h-screen w-64 shrink-0 border-r border-zinc-800 bg-zinc-950 px-4 py-6 lg:flex lg:flex-col">
       <div className="px-3">
@@ -23,19 +30,23 @@ export function Sidebar() {
       </div>
 
       <nav className="mt-10 space-y-1">
-        {navigation.map((item) => (
-          <a
-            key={item.label}
-            href="#"
-            className={`block rounded-xl px-3 py-2.5 text-sm font-medium transition ${
-              item.active
-                ? "bg-zinc-800 text-white"
-                : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
-            }`}
-          >
-            {item.label}
-          </a>
-        ))}
+        {navigation.map((item) => {
+          const active = pathname === item.href;
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`block rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                active
+                  ? "bg-zinc-800 text-white"
+                  : "text-zinc-400 hover:bg-zinc-900 hover:text-white"
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="mt-auto rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
