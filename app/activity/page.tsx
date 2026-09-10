@@ -1,11 +1,18 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import {
-  activities,
-  getMemberById,
-} from "@/lib/workspace-data";
+  getWorkspaceActivity,
+  getWorkspaceMembers,
+} from "@/lib/workspace-repository";
 
-export default function ActivityPage() {
+export const dynamic = "force-dynamic";
+
+export default async function ActivityPage() {
+  const [activities, members] = await Promise.all([
+    getWorkspaceActivity(),
+    getWorkspaceMembers(),
+  ]);
+
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
       <div className="flex min-h-screen">
@@ -15,20 +22,14 @@ export default function ActivityPage() {
           <Topbar />
 
           <div className="px-5 py-8 sm:px-8">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="text-sm font-medium text-zinc-500">Workspace</p>
-                <h2 className="mt-1 text-3xl font-semibold tracking-tight">
-                  Activity
-                </h2>
-                <p className="mt-2 text-sm text-zinc-500">
-                  Follow recent updates and changes across your workspace.
-                </p>
-              </div>
-
-              <button className="w-fit rounded-xl border border-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-900">
-                Export activity
-              </button>
+            <div>
+              <p className="text-sm font-medium text-zinc-500">Workspace</p>
+              <h2 className="mt-1 text-3xl font-semibold tracking-tight">
+                Activity
+              </h2>
+              <p className="mt-2 text-sm text-zinc-500">
+                Follow recent updates stored in PostgreSQL.
+              </p>
             </div>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -42,7 +43,13 @@ export default function ActivityPage() {
               <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
                 <p className="text-sm text-zinc-500">Contributors</p>
                 <p className="mt-3 text-3xl font-semibold">
-                  {new Set(activities.map((activity) => activity.memberId)).size}
+                  {
+                    new Set(
+                      activities
+                        .map((activity) => activity.memberId)
+                        .filter(Boolean)
+                    ).size
+                  }
                 </p>
               </article>
 
@@ -62,13 +69,12 @@ export default function ActivityPage() {
 
               <div className="divide-y divide-zinc-800">
                 {activities.map((activity) => {
-                  const member = getMemberById(activity.memberId);
+                  const member = members.find(
+                    (item) => item.id === activity.memberId
+                  );
 
                   return (
-                    <article
-                      key={activity.id}
-                      className="flex gap-4 px-5 py-5"
-                    >
+                    <article key={activity.id} className="flex gap-4 px-5 py-5">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs font-semibold">
                         {member?.initials ?? "?"}
                       </div>
@@ -76,15 +82,23 @@ export default function ActivityPage() {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm leading-6 text-zinc-300">
                           <span className="font-medium text-white">
-                            {member?.name ?? "Unknown member"}
+                            {member?.name ?? "System"}
                           </span>{" "}
                           {activity.message}
                         </p>
 
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-600">
-                          <span>{member?.role ?? "Workspace member"}</span>
+                          <span>{member?.role ?? "Workspace event"}</span>
                           <span>•</span>
-                          <span>{activity.occurredAt}</span>
+                          <span>
+                            {new Date(activity.occurredAt).toLocaleString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </span>
                         </div>
                       </div>
                     </article>
