@@ -1,9 +1,23 @@
 import { NextResponse } from "next/server";
-import { teamMembers } from "@/lib/workspace-data";
+import { getWorkspaceMembers } from "@/lib/workspace-repository";
 
 export async function GET() {
-  return NextResponse.json({
-    data: teamMembers,
-    count: teamMembers.length,
-  });
+  try {
+    const members = await getWorkspaceMembers();
+
+    return NextResponse.json({
+      data: members,
+      count: members.length,
+    });
+  } catch (error) {
+    console.error("GET /api/team failed:", error);
+
+    return NextResponse.json(
+      {
+        error: "DATABASE_ERROR",
+        message: "Unable to load workspace members.",
+      },
+      { status: 500 }
+    );
+  }
 }

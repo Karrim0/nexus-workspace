@@ -1,13 +1,31 @@
 import { NextResponse } from "next/server";
-import { projects, teamMembers } from "@/lib/workspace-data";
+import { db } from "@/lib/db";
 import { validateCreateProject } from "@/lib/api-validation";
+import {
+  getWorkspaceProjects,
+  PRODUCT_TEAM_WORKSPACE_ID,
+} from "@/lib/workspace-repository";
 import type { Project } from "@/types/workspace";
 
 export async function GET() {
-  return NextResponse.json({
-    data: projects,
-    count: projects.length,
-  });
+  try {
+    const projects = await getWorkspaceProjects();
+
+    return NextResponse.json({
+      data: projects,
+      count: projects.length,
+    });
+  } catch (error) {
+    console.error("GET /api/projects failed:", error);
+
+    return NextResponse.json(
+      {
+        error: "DATABASE_ERROR",
+        message: "Unable to load projects.",
+      },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -37,8 +55,43 @@ export async function POST(request: Request) {
     );
   }
 
+  const workspace = await db.workspace.findUnique({
+    where: {
+      id: PRODUCT_TEAM_WORKSPACE_ID,
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (!workspace) {
+    return NextResponse.json(
+      {
+        error: "WORKSPACE_NOT_FOUND",
+        message: "The workspace does not exist.",
+      },
+      { status: 404 }
+    );
+  }
+
+  const validMembers = await db.workspaceMember.findMany({
+    where: {
+      workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+      userId: {
+        in: result.data.memberIds,
+      },
+    },
+    select: {
+      userId: true,
+    },
+  });
+
+  const validMemberIds = new Set(
+    validMembers.map((membership) => membership.userId)
+  );
+
   const invalidMemberIds = result.data.memberIds.filter(
-    (memberId) => !teamMembers.some((member) => member.id === memberId)
+    (memberId) => !validMemberIds.has(memberId)
   );
 
   if (invalidMemberIds.length > 0) {

@@ -1,17 +1,31 @@
 import { NextResponse } from "next/server";
-import {
-  projects,
-  tasks,
-  teamMembers,
-} from "@/lib/workspace-data";
+import { db } from "@/lib/db";
 import { validateCreateTask } from "@/lib/api-validation";
+import {
+  getWorkspaceTasks,
+  PRODUCT_TEAM_WORKSPACE_ID,
+} from "@/lib/workspace-repository";
 import type { Task } from "@/types/workspace";
 
 export async function GET() {
-  return NextResponse.json({
-    data: tasks,
-    count: tasks.length,
-  });
+  try {
+    const tasks = await getWorkspaceTasks();
+
+    return NextResponse.json({
+      data: tasks,
+      count: tasks.length,
+    });
+  } catch (error) {
+    console.error("GET /api/tasks failed:", error);
+
+    return NextResponse.json(
+      {
+        error: "DATABASE_ERROR",
+        message: "Unable to load tasks.",
+      },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -41,11 +55,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const projectExists = projects.some(
-    (project) => project.id === result.data.projectId
-  );
+  const project = await db.project.findFirst({
+    where: {
+      id: result.data.projectId,
+      workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+    },
+    select: {
+      id: true,
+    },
+  });
 
-  if (!projectExists) {
+  if (!project) {
     return NextResponse.json(
       {
         error: "PROJECT_NOT_FOUND",
@@ -55,11 +75,19 @@ export async function POST(request: Request) {
     );
   }
 
-  const assigneeExists = teamMembers.some(
-    (member) => member.id === result.data.assigneeId
-  );
+  const assignee = await db.workspaceMember.findUnique({
+    where: {
+      workspaceId_userId: {
+        workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+        userId: result.data.assigneeId,
+      },
+    },
+    select: {
+      userId: true,
+    },
+  });
 
-  if (!assigneeExists) {
+  if (!assignee) {
     return NextResponse.json(
       {
         error: "ASSIGNEE_NOT_FOUND",
