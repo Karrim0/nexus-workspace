@@ -5,7 +5,6 @@ import {
   getWorkspaceProjects,
   PRODUCT_TEAM_WORKSPACE_ID,
 } from "@/lib/workspace-repository";
-import type { Project } from "@/types/workspace";
 
 export async function GET() {
   try {
@@ -55,73 +54,118 @@ export async function POST(request: Request) {
     );
   }
 
-  const workspace = await db.workspace.findUnique({
-    where: {
-      id: PRODUCT_TEAM_WORKSPACE_ID,
-    },
-    select: {
-      id: true,
-    },
-  });
+  try {
+    const workspace = await db.workspace.findUnique({
+      where: {
+        id: PRODUCT_TEAM_WORKSPACE_ID,
+      },
+      select: {
+        id: true,
+      },
+    });
 
-  if (!workspace) {
+    if (!workspace) {
+      return NextResponse.json(
+        {
+          error: "WORKSPACE_NOT_FOUND",
+          message: "The workspace does not exist.",
+        },
+        { status: 404 }
+      );
+    }
+
+    const validMembers = await db.workspaceMember.findMany({
+      where: {
+        workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+        userId: {
+          in: result.data.memberIds,
+        },
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    const validMemberIds = new Set(
+      validMembers.map((membership) => membership.userId)
+    );
+
+    const invalidMemberIds = result.data.memberIds.filter(
+      (memberId) => !validMemberIds.has(memberId)
+    );
+
+    if (invalidMemberIds.length > 0) {
+      return NextResponse.json(
+        {
+          error: "INVALID_MEMBERS",
+          message: "One or more workspace members do not exist.",
+          memberIds: invalidMemberIds,
+        },
+        { status: 400 }
+      );
+    }
+
+    const projectId = crypto.randomUUID();
+
+    const project = await db.$transaction(async (tx) => {
+      const createdProject = await tx.project.create({
+        data: {
+          id: projectId,
+          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          name: result.data.name,
+          description: result.data.description,
+          status: result.data.status,
+          progress: 0,
+          completedTasks: 0,
+          totalTasks: 0,
+          members: {
+            create: result.data.memberIds.map((userId) => ({
+              userId,
+            })),
+          },
+        },
+        include: {
+          members: true,
+        },
+      });
+
+      await tx.activity.create({
+        data: {
+          id: crypto.randomUUID(),
+          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          userId: "member-kareem",
+          message: `created ${createdProject.name}`,
+        },
+      });
+
+      return createdProject;
+    });
+
     return NextResponse.json(
       {
-        error: "WORKSPACE_NOT_FOUND",
-        message: "The workspace does not exist.",
+        data: {
+          id: project.id,
+          name: project.name,
+          description: project.description,
+          status: project.status,
+          progress: project.progress,
+          completedTasks: project.completedTasks,
+          totalTasks: project.totalTasks,
+          memberIds: project.members.map((member) => member.userId),
+        },
+        message: "Project created successfully.",
       },
-      { status: 404 }
+      { status: 201 }
     );
-  }
+  } catch (error) {
+    console.error("POST /api/projects failed:", error);
 
-  const validMembers = await db.workspaceMember.findMany({
-    where: {
-      workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-      userId: {
-        in: result.data.memberIds,
-      },
-    },
-    select: {
-      userId: true,
-    },
-  });
-
-  const validMemberIds = new Set(
-    validMembers.map((membership) => membership.userId)
-  );
-
-  const invalidMemberIds = result.data.memberIds.filter(
-    (memberId) => !validMemberIds.has(memberId)
-  );
-
-  if (invalidMemberIds.length > 0) {
     return NextResponse.json(
       {
-        error: "INVALID_MEMBERS",
-        message: "One or more workspace members do not exist.",
-        memberIds: invalidMemberIds,
+        error: "DATABASE_ERROR",
+        message: "Unable to create project.",
       },
-      { status: 400 }
+      { status: 500 }
     );
   }
-
-  const project: Project = {
-    id: crypto.randomUUID(),
-    name: result.data.name,
-    description: result.data.description,
-    status: result.data.status,
-    progress: 0,
-    completedTasks: 0,
-    totalTasks: 0,
-    memberIds: result.data.memberIds,
-  };
-
-  return NextResponse.json(
-    {
-      data: project,
-      message:
-        "Project validated successfully. Database persistence will be added next.",
-    },
-    { status: 201 }
-  );
 }

@@ -146,6 +146,8 @@ export function validateCreateTask(
 
   if (!dueDate) {
     errors.push("dueDate is required.");
+  } else if (Number.isNaN(new Date(dueDate).getTime())) {
+    errors.push("dueDate must be a valid date.");
   }
 
   if (errors.length > 0) {
