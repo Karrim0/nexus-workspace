@@ -48,6 +48,8 @@ export async function PATCH(
     );
   }
 
+  const nextStatus: TaskStatus = payload.status;
+
   try {
     const task = await db.task.findFirst({
       where: {
@@ -74,7 +76,7 @@ export async function PATCH(
       );
     }
 
-    if (task.status === payload.status) {
+    if (task.status === nextStatus) {
       return NextResponse.json({
         data: task,
         message: "Task status is already up to date.",
@@ -87,7 +89,7 @@ export async function PATCH(
           id: task.id,
         },
         data: {
-          status: payload.status,
+          status: nextStatus,
         },
       });
 
@@ -126,7 +128,7 @@ export async function PATCH(
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
           userId: "member-kareem",
-          message: `moved "${task.title}" to ${payload.status}`,
+          message: `moved "${task.title}" to ${nextStatus}`,
         },
       });
 
