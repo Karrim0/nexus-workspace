@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
 import {
   getWorkspaceMembers,
   getWorkspaceProjects,
@@ -41,37 +42,36 @@ export default async function TasksPage() {
                 </p>
               </div>
 
-              <button className="w-fit rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200">
-                + New Task
-              </button>
+              <NewTaskDialog
+                projects={projects.map((project) => ({
+                  id: project.id,
+                  name: project.name,
+                }))}
+                members={members.map((member) => ({
+                  id: member.id,
+                  name: member.name,
+                  initials: member.initials,
+                }))}
+              />
             </div>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-3">
               <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
                 <p className="text-sm text-zinc-500">Assigned to me</p>
-                <p className="mt-3 text-3xl font-semibold">
-                  {assignedTasks.length}
-                </p>
+                <p className="mt-3 text-3xl font-semibold">{assignedTasks.length}</p>
               </article>
 
               <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
                 <p className="text-sm text-zinc-500">In progress</p>
                 <p className="mt-3 text-3xl font-semibold">
-                  {
-                    assignedTasks.filter(
-                      (task) => task.status === "In Progress"
-                    ).length
-                  }
+                  {assignedTasks.filter((task) => task.status === "In Progress").length}
                 </p>
               </article>
 
               <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
                 <p className="text-sm text-zinc-500">High priority</p>
                 <p className="mt-3 text-3xl font-semibold">
-                  {
-                    assignedTasks.filter((task) => task.priority === "High")
-                      .length
-                  }
+                  {assignedTasks.filter((task) => task.priority === "High").length}
                 </p>
               </article>
             </div>
@@ -97,12 +97,8 @@ export default async function TasksPage() {
 
                       <div className="mt-4 space-y-3">
                         {columnTasks.map((task) => {
-                          const project = projects.find(
-                            (item) => item.id === task.projectId
-                          );
-                          const assignee = members.find(
-                            (item) => item.id === task.assigneeId
-                          );
+                          const project = projects.find((item) => item.id === task.projectId);
+                          const assignee = members.find((item) => item.id === task.assigneeId);
 
                           return (
                             <article
@@ -113,7 +109,6 @@ export default async function TasksPage() {
                                 <h4 className="text-sm font-medium leading-5">
                                   {task.title}
                                 </h4>
-
                                 <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] text-zinc-400">
                                   {task.priority}
                                 </span>
