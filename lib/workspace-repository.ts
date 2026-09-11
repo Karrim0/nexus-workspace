@@ -27,6 +27,64 @@ export async function getWorkspaceProjects() {
   }));
 }
 
+export async function getWorkspaceProjectById(projectId: string) {
+  const project = await db.project.findFirst({
+    where: {
+      id: projectId,
+      workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+    },
+    include: {
+      members: {
+        include: {
+          user: true,
+        },
+      },
+      tasks: {
+        include: {
+          assignee: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+    },
+  });
+
+  if (!project) {
+    return null;
+  }
+
+  return {
+    id: project.id,
+    name: project.name,
+    description: project.description,
+    progress: project.progress,
+    status: project.status,
+    completedTasks: project.completedTasks,
+    totalTasks: project.totalTasks,
+    members: project.members.map((membership) => ({
+      id: membership.user.id,
+      name: membership.user.name,
+      initials: membership.user.initials,
+      email: membership.user.email,
+    })),
+    tasks: project.tasks.map((task) => ({
+      id: task.id,
+      title: task.title,
+      priority: task.priority,
+      status: task.status,
+      dueDate: task.dueDate?.toISOString() ?? null,
+      assignee: task.assignee
+        ? {
+            id: task.assignee.id,
+            name: task.assignee.name,
+            initials: task.assignee.initials,
+          }
+        : null,
+    })),
+  };
+}
+
 export async function getWorkspaceTasks() {
   const tasks = await db.task.findMany({
     where: {

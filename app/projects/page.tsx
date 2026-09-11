@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
@@ -98,9 +99,12 @@ export default async function ProjectsPage() {
                         ))}
                       </div>
 
-                      <button className="text-sm font-medium text-zinc-400 transition hover:text-white">
+                      <Link
+                        href={`/projects/${project.id}`}
+                        className="text-sm font-medium text-zinc-400 transition hover:text-white"
+                      >
                         Open project →
-                      </button>
+                      </Link>
                     </div>
                   </article>
                 );
