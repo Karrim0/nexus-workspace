@@ -15,6 +15,8 @@ export type CreateProjectInput = {
   memberIds: string[];
 };
 
+export type UpdateProjectInput = CreateProjectInput;
+
 export type CreateTaskInput = {
   title: string;
   projectId: string;
@@ -43,7 +45,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function validateCreateProject(
+function validateProjectPayload(
   payload: unknown
 ): ValidationResult<CreateProjectInput> {
   if (!isRecord(payload)) {
@@ -96,6 +98,18 @@ export function validateCreateProject(
       memberIds: memberIds as string[],
     },
   };
+}
+
+export function validateCreateProject(
+  payload: unknown
+): ValidationResult<CreateProjectInput> {
+  return validateProjectPayload(payload);
+}
+
+export function validateUpdateProject(
+  payload: unknown
+): ValidationResult<UpdateProjectInput> {
+  return validateProjectPayload(payload);
 }
 
 export function validateCreateTask(
