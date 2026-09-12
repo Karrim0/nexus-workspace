@@ -106,6 +106,16 @@ export async function PATCH(request: Request, context: RouteContext) {
     const nextProjectId = result.data.projectId ?? existingTask.projectId;
     const nextAssigneeId = result.data.assigneeId ?? existingTask.assigneeId;
 
+    if (!nextAssigneeId) {
+      return NextResponse.json(
+        {
+          error: "ASSIGNEE_REQUIRED",
+          message: "The task must have an assignee.",
+        },
+        { status: 400 }
+      );
+    }
+
     const [project, assignee] = await Promise.all([
       db.project.findFirst({
         where: {
