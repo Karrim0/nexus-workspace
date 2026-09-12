@@ -2,7 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
-import { getWorkspaceProjectById } from "@/lib/workspace-repository";
+import { ProjectActions } from "@/components/projects/project-actions";
+import {
+  getWorkspaceMembers,
+  getWorkspaceProjectById,
+} from "@/lib/workspace-repository";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +20,11 @@ export default async function ProjectDetailsPage({
   params,
 }: ProjectDetailsPageProps) {
   const { projectId } = await params;
-  const project = await getWorkspaceProjectById(projectId);
+
+  const [project, members] = await Promise.all([
+    getWorkspaceProjectById(projectId),
+    getWorkspaceMembers(),
+  ]);
 
   if (!project) {
     notFound();
@@ -38,7 +46,7 @@ export default async function ProjectDetailsPage({
               ← Back to projects
             </Link>
 
-            <div className="mt-6 flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="mt-6 flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
               <div className="max-w-3xl">
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-3xl font-semibold tracking-tight">
@@ -55,13 +63,30 @@ export default async function ProjectDetailsPage({
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-5 py-4">
-                <p className="text-xs uppercase tracking-wide text-zinc-600">
-                  Project progress
-                </p>
-                <p className="mt-2 text-3xl font-semibold">
-                  {project.progress}%
-                </p>
+              <div className="flex flex-col items-start gap-4 xl:items-end">
+                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 px-5 py-4">
+                  <p className="text-xs uppercase tracking-wide text-zinc-600">
+                    Project progress
+                  </p>
+                  <p className="mt-2 text-3xl font-semibold">
+                    {project.progress}%
+                  </p>
+                </div>
+
+                <ProjectActions
+                  project={{
+                    id: project.id,
+                    name: project.name,
+                    description: project.description,
+                    status: project.status,
+                    memberIds: project.members.map((member) => member.id),
+                  }}
+                  members={members.map((member) => ({
+                    id: member.id,
+                    name: member.name,
+                    initials: member.initials,
+                  }))}
+                />
               </div>
             </div>
 
