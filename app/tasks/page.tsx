@@ -23,6 +23,17 @@ export default async function TasksPage() {
     (task) => task.assigneeId === "member-kareem"
   );
 
+  const projectOptions = projects.map((project) => ({
+    id: project.id,
+    name: project.name,
+  }));
+
+  const memberOptions = members.map((member) => ({
+    id: member.id,
+    name: member.name,
+    initials: member.initials,
+  }));
+
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
       <div className="flex min-h-screen">
@@ -39,20 +50,13 @@ export default async function TasksPage() {
                   My Tasks
                 </h2>
                 <p className="mt-2 text-sm text-zinc-500">
-                  Create tasks and move them through the workflow in real time.
+                  Create, edit, move, and delete tasks from one workflow.
                 </p>
               </div>
 
               <NewTaskDialog
-                projects={projects.map((project) => ({
-                  id: project.id,
-                  name: project.name,
-                }))}
-                members={members.map((member) => ({
-                  id: member.id,
-                  name: member.name,
-                  initials: member.initials,
-                }))}
+                projects={projectOptions}
+                members={memberOptions}
               />
             </div>
 
@@ -120,6 +124,8 @@ export default async function TasksPage() {
                               task={{
                                 id: task.id,
                                 title: task.title,
+                                projectId: task.projectId,
+                                assigneeId: task.assigneeId,
                                 priority: task.priority,
                                 status: task.status,
                                 dueDate: task.dueDate,
@@ -127,6 +133,8 @@ export default async function TasksPage() {
                               projectName={project?.name ?? "Unknown project"}
                               assigneeName={assignee?.name}
                               assigneeInitials={assignee?.initials}
+                              projects={projectOptions}
+                              members={memberOptions}
                             />
                           );
                         })}
