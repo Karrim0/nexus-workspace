@@ -1,22 +1,51 @@
+import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { validateUpdateTask } from "@/lib/api-validation";
 import { PRODUCT_TEAM_WORKSPACE_ID } from "@/lib/workspace-repository";
 
-const allowedStatuses = ["Todo", "In Progress", "Review", "Done"] as const;
+type RouteContext = {
+  params: Promise<{
+    taskId: string;
+  }>;
+};
 
-type TaskStatus = (typeof allowedStatuses)[number];
+async function syncProjectProgress(
+  tx: Prisma.TransactionClient,
+  projectId: string
+) {
+  const [totalTasks, completedTasks] = await Promise.all([
+    tx.task.count({
+      where: {
+        projectId,
+      },
+    }),
+    tx.task.count({
+      where: {
+        projectId,
+        status: "Done",
+      },
+    }),
+  ]);
 
-function isTaskStatus(value: unknown): value is TaskStatus {
-  return (
-    typeof value === "string" &&
-    allowedStatuses.includes(value as TaskStatus)
-  );
+  const progress =
+    totalTasks === 0
+      ? 0
+      : Math.round((completedTasks / totalTasks) * 100);
+
+  await tx.project.update({
+    where: {
+      id: projectId,
+    },
+    data: {
+      totalTasks,
+      completedTasks,
+      progress,
+    },
+  });
 }
 
-export async function PATCH(
-  request: Request,
-  context: { params: Promise<{ taskId: string }> }
-) {
+export async function PATCH(request: Request, context: RouteContext) {
   const { taskId } = await context.params;
 
   let payload: unknown;
@@ -33,25 +62,20 @@ export async function PATCH(
     );
   }
 
-  if (
-    typeof payload !== "object" ||
-    payload === null ||
-    !("status" in payload) ||
-    !isTaskStatus(payload.status)
-  ) {
+  const result = validateUpdateTask(payload);
+
+  if (!result.success) {
     return NextResponse.json(
       {
         error: "VALIDATION_ERROR",
-        message: "status must be Todo, In Progress, Review, or Done.",
+        errors: result.errors,
       },
       { status: 400 }
     );
   }
 
-  const nextStatus: TaskStatus = payload.status;
-
   try {
-    const task = await db.task.findFirst({
+    const existingTask = await db.task.findFirst({
       where: {
         id: taskId,
         project: {
@@ -61,12 +85,15 @@ export async function PATCH(
       select: {
         id: true,
         title: true,
-        status: true,
         projectId: true,
+        assigneeId: true,
+        priority: true,
+        status: true,
+        dueDate: true,
       },
     });
 
-    if (!task) {
+    if (!existingTask) {
       return NextResponse.json(
         {
           error: "TASK_NOT_FOUND",
@@ -76,59 +103,85 @@ export async function PATCH(
       );
     }
 
-    if (task.status === nextStatus) {
-      return NextResponse.json({
-        data: task,
-        message: "Task status is already up to date.",
-      });
+    const nextProjectId = result.data.projectId ?? existingTask.projectId;
+    const nextAssigneeId = result.data.assigneeId ?? existingTask.assigneeId;
+
+    const [project, assignee] = await Promise.all([
+      db.project.findFirst({
+        where: {
+          id: nextProjectId,
+          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+        },
+        select: {
+          id: true,
+        },
+      }),
+      db.workspaceMember.findFirst({
+        where: {
+          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          userId: nextAssigneeId,
+        },
+        select: {
+          userId: true,
+        },
+      }),
+    ]);
+
+    if (!project) {
+      return NextResponse.json(
+        {
+          error: "PROJECT_NOT_FOUND",
+          message: "The selected project does not exist.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!assignee) {
+      return NextResponse.json(
+        {
+          error: "ASSIGNEE_NOT_FOUND",
+          message: "The selected assignee is not a workspace member.",
+        },
+        { status: 400 }
+      );
     }
 
     const updatedTask = await db.$transaction(async (tx) => {
       const updated = await tx.task.update({
         where: {
-          id: task.id,
+          id: taskId,
         },
         data: {
-          status: nextStatus,
+          title: result.data.title ?? existingTask.title,
+          projectId: nextProjectId,
+          assigneeId: nextAssigneeId,
+          priority: result.data.priority ?? existingTask.priority,
+          status: result.data.status ?? existingTask.status,
+          dueDate: result.data.dueDate
+            ? new Date(result.data.dueDate)
+            : existingTask.dueDate,
         },
       });
 
-      const [totalTasks, completedTasks] = await Promise.all([
-        tx.task.count({
-          where: {
-            projectId: task.projectId,
-          },
-        }),
-        tx.task.count({
-          where: {
-            projectId: task.projectId,
-            status: "Done",
-          },
-        }),
-      ]);
+      const affectedProjectIds = Array.from(
+        new Set([existingTask.projectId, nextProjectId])
+      );
 
-      const progress =
-        totalTasks === 0
-          ? 0
-          : Math.round((completedTasks / totalTasks) * 100);
-
-      await tx.project.update({
-        where: {
-          id: task.projectId,
-        },
-        data: {
-          totalTasks,
-          completedTasks,
-          progress,
-        },
-      });
+      for (const projectId of affectedProjectIds) {
+        await syncProjectProgress(tx, projectId);
+      }
 
       await tx.activity.create({
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
           userId: "member-kareem",
-          message: `moved "${task.title}" to ${nextStatus}`,
+          message:
+            result.data.status &&
+            Object.keys(result.data).length === 1
+              ? `moved "${updated.title}" to ${updated.status}`
+              : `updated task "${updated.title}"`,
         },
       });
 
@@ -145,7 +198,7 @@ export async function PATCH(
         status: updatedTask.status,
         dueDate: updatedTask.dueDate?.toISOString() ?? null,
       },
-      message: "Task status updated successfully.",
+      message: "Task updated successfully.",
     });
   } catch (error) {
     console.error(`PATCH /api/tasks/${taskId} failed:`, error);
@@ -153,7 +206,70 @@ export async function PATCH(
     return NextResponse.json(
       {
         error: "DATABASE_ERROR",
-        message: "Unable to update task status.",
+        message: "Unable to update task.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  const { taskId } = await context.params;
+
+  try {
+    const existingTask = await db.task.findFirst({
+      where: {
+        id: taskId,
+        project: {
+          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+        },
+      },
+      select: {
+        id: true,
+        title: true,
+        projectId: true,
+      },
+    });
+
+    if (!existingTask) {
+      return NextResponse.json(
+        {
+          error: "TASK_NOT_FOUND",
+          message: "The task does not exist.",
+        },
+        { status: 404 }
+      );
+    }
+
+    await db.$transaction(async (tx) => {
+      await tx.task.delete({
+        where: {
+          id: taskId,
+        },
+      });
+
+      await syncProjectProgress(tx, existingTask.projectId);
+
+      await tx.activity.create({
+        data: {
+          id: crypto.randomUUID(),
+          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          userId: "member-kareem",
+          message: `deleted task "${existingTask.title}"`,
+        },
+      });
+    });
+
+    return NextResponse.json({
+      message: "Task deleted successfully.",
+    });
+  } catch (error) {
+    console.error(`DELETE /api/tasks/${taskId} failed:`, error);
+
+    return NextResponse.json(
+      {
+        error: "DATABASE_ERROR",
+        message: "Unable to delete task.",
       },
       { status: 500 }
     );

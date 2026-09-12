@@ -26,6 +26,8 @@ export type CreateTaskInput = {
   dueDate: string;
 };
 
+export type UpdateTaskInput = Partial<CreateTaskInput>;
+
 const projectStatuses: ProjectStatus[] = [
   "Planning",
   "In Progress",
@@ -100,19 +102,7 @@ function validateProjectPayload(
   };
 }
 
-export function validateCreateProject(
-  payload: unknown
-): ValidationResult<CreateProjectInput> {
-  return validateProjectPayload(payload);
-}
-
-export function validateUpdateProject(
-  payload: unknown
-): ValidationResult<UpdateProjectInput> {
-  return validateProjectPayload(payload);
-}
-
-export function validateCreateTask(
+function validateTaskPayload(
   payload: unknown
 ): ValidationResult<CreateTaskInput> {
   if (!isRecord(payload)) {
@@ -178,5 +168,122 @@ export function validateCreateTask(
       status: status as TaskStatus,
       dueDate,
     },
+  };
+}
+
+export function validateCreateProject(
+  payload: unknown
+): ValidationResult<CreateProjectInput> {
+  return validateProjectPayload(payload);
+}
+
+export function validateUpdateProject(
+  payload: unknown
+): ValidationResult<UpdateProjectInput> {
+  return validateProjectPayload(payload);
+}
+
+export function validateCreateTask(
+  payload: unknown
+): ValidationResult<CreateTaskInput> {
+  return validateTaskPayload(payload);
+}
+
+export function validateUpdateTask(
+  payload: unknown
+): ValidationResult<UpdateTaskInput> {
+  if (!isRecord(payload)) {
+    return { success: false, errors: ["Request body must be a JSON object."] };
+  }
+
+  const errors: string[] = [];
+  const data: UpdateTaskInput = {};
+  let suppliedFields = 0;
+
+  if ("title" in payload) {
+    suppliedFields += 1;
+    const title =
+      typeof payload.title === "string" ? payload.title.trim() : "";
+
+    if (title.length < 3) {
+      errors.push("Task title must be at least 3 characters.");
+    } else {
+      data.title = title;
+    }
+  }
+
+  if ("projectId" in payload) {
+    suppliedFields += 1;
+    const projectId =
+      typeof payload.projectId === "string" ? payload.projectId.trim() : "";
+
+    if (!projectId) {
+      errors.push("projectId must be a non-empty string.");
+    } else {
+      data.projectId = projectId;
+    }
+  }
+
+  if ("assigneeId" in payload) {
+    suppliedFields += 1;
+    const assigneeId =
+      typeof payload.assigneeId === "string" ? payload.assigneeId.trim() : "";
+
+    if (!assigneeId) {
+      errors.push("assigneeId must be a non-empty string.");
+    } else {
+      data.assigneeId = assigneeId;
+    }
+  }
+
+  if ("priority" in payload) {
+    suppliedFields += 1;
+
+    if (
+      typeof payload.priority !== "string" ||
+      !taskPriorities.includes(payload.priority as TaskPriority)
+    ) {
+      errors.push("Task priority is invalid.");
+    } else {
+      data.priority = payload.priority as TaskPriority;
+    }
+  }
+
+  if ("status" in payload) {
+    suppliedFields += 1;
+
+    if (
+      typeof payload.status !== "string" ||
+      !taskStatuses.includes(payload.status as TaskStatus)
+    ) {
+      errors.push("Task status is invalid.");
+    } else {
+      data.status = payload.status as TaskStatus;
+    }
+  }
+
+  if ("dueDate" in payload) {
+    suppliedFields += 1;
+    const dueDate =
+      typeof payload.dueDate === "string" ? payload.dueDate.trim() : "";
+
+    if (!dueDate || Number.isNaN(new Date(dueDate).getTime())) {
+      errors.push("dueDate must be a valid date.");
+    } else {
+      data.dueDate = dueDate;
+    }
+  }
+
+  if (suppliedFields === 0) {
+    errors.push("Provide at least one task field to update.");
+  }
+
+  if (errors.length > 0) {
+    return { success: false, errors };
+  }
+
+  return {
+    success: true,
+    data,
   };
 }
