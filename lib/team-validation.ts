@@ -8,6 +8,11 @@ export type InviteMemberInput = {
   role: string;
 };
 
+export type UpdateMemberInput = {
+  role?: string;
+  status?: "Active" | "Invited";
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -63,5 +68,58 @@ export function validateInviteMember(
       email,
       role,
     },
+  };
+}
+
+export function validateUpdateMember(
+  payload: unknown
+): ValidationResult<UpdateMemberInput> {
+  if (!isRecord(payload)) {
+    return {
+      success: false,
+      errors: ["Request body must be a JSON object."],
+    };
+  }
+
+  const errors: string[] = [];
+  const data: UpdateMemberInput = {};
+  let suppliedFields = 0;
+
+  if ("role" in payload) {
+    suppliedFields += 1;
+    const role =
+      typeof payload.role === "string" ? payload.role.trim() : "";
+
+    if (role.length < 2) {
+      errors.push("Member role must be at least 2 characters.");
+    } else {
+      data.role = role;
+    }
+  }
+
+  if ("status" in payload) {
+    suppliedFields += 1;
+
+    if (payload.status !== "Active" && payload.status !== "Invited") {
+      errors.push("Member status must be Active or Invited.");
+    } else {
+      data.status = payload.status;
+    }
+  }
+
+  if (suppliedFields === 0) {
+    errors.push("Provide role or status to update.");
+  }
+
+  if (errors.length > 0) {
+    return {
+      success: false,
+      errors,
+    };
+  }
+
+  return {
+    success: true,
+    data,
   };
 }
