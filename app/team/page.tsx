@@ -1,6 +1,7 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { InviteMemberDialog } from "@/components/team/invite-member-dialog";
+import { MemberActions } from "@/components/team/member-actions";
 import { getWorkspaceMembers } from "@/lib/workspace-repository";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +33,7 @@ export default async function TeamPage() {
                   Team
                 </h2>
                 <p className="mt-2 text-sm text-zinc-500">
-                  Manage the people working across your workspace.
+                  Invite people and manage workspace access from one place.
                 </p>
               </div>
 
@@ -68,7 +69,7 @@ export default async function TeamPage() {
                 {members.map((member) => (
                   <article
                     key={member.id}
-                    className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex flex-col gap-4 px-5 py-5 lg:flex-row lg:items-center lg:justify-between"
                   >
                     <div className="flex min-w-0 items-center gap-4">
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs font-semibold">
@@ -76,27 +77,47 @@ export default async function TeamPage() {
                       </div>
 
                       <div className="min-w-0">
-                        <p className="font-medium">{member.name}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium">{member.name}</p>
+
+                          {member.id === "member-kareem" ? (
+                            <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-400">
+                              Owner
+                            </span>
+                          ) : null}
+                        </div>
+
                         <p className="mt-1 truncate text-sm text-zinc-500">
                           {member.email}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3 sm:justify-end">
-                      <span className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-400">
-                        {member.role}
-                      </span>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center lg:justify-end">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-400">
+                          {member.role}
+                        </span>
 
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs ${
-                          member.status === "Active"
-                            ? "bg-emerald-950/40 text-emerald-300"
-                            : "bg-amber-950/40 text-amber-300"
-                        }`}
-                      >
-                        {member.status}
-                      </span>
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs ${
+                            member.status === "Active"
+                              ? "bg-emerald-950/40 text-emerald-300"
+                              : "bg-amber-950/40 text-amber-300"
+                          }`}
+                        >
+                          {member.status}
+                        </span>
+                      </div>
+
+                      <MemberActions
+                        member={{
+                          id: member.id,
+                          name: member.name,
+                          role: member.role,
+                          status: member.status,
+                        }}
+                      />
                     </div>
                   </article>
                 ))}
