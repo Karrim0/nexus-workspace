@@ -1,4 +1,9 @@
-export function Topbar() {
+import { UserMenu } from "@/components/auth/user-menu";
+import { getCurrentUser } from "@/lib/auth/current-user";
+
+export async function Topbar() {
+  const user = await getCurrentUser();
+
   return (
     <header className="flex h-20 items-center justify-between border-b border-zinc-800 px-5 sm:px-8">
       <div>
@@ -11,9 +16,19 @@ export function Topbar() {
           Search
         </button>
 
-        <button className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900 text-sm font-semibold text-white">
-          KM
-        </button>
+        {user ? (
+          <UserMenu
+            user={{
+              name: user.name,
+              email: user.email,
+              initials: user.initials,
+            }}
+          />
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-800 bg-zinc-900 text-xs font-semibold text-zinc-500">
+            ?
+          </div>
+        )}
       </div>
     </header>
   );
