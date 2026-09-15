@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { db } from "@/lib/db";
 import { validateUpdateProject } from "@/lib/api-validation";
 import { PRODUCT_TEAM_WORKSPACE_ID } from "@/lib/workspace-repository";
@@ -9,7 +10,23 @@ type RouteContext = {
   }>;
 };
 
+function unauthorized() {
+  return NextResponse.json(
+    {
+      error: "UNAUTHORIZED",
+      message: "You must be signed in to perform this action.",
+    },
+    { status: 401 }
+  );
+}
+
 export async function PATCH(request: Request, context: RouteContext) {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    return unauthorized();
+  }
+
   const { projectId } = await context.params;
 
   let payload: unknown;
@@ -121,7 +138,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-          userId: "member-kareem",
+          userId: currentUser.id,
           message: `updated ${updated.name}`,
         },
       });
@@ -156,6 +173,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    return unauthorized();
+  }
+
   const { projectId } = await context.params;
 
   try {
@@ -191,7 +214,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-          userId: "member-kareem",
+          userId: currentUser.id,
           message: `deleted ${existingProject.name}`,
         },
       });

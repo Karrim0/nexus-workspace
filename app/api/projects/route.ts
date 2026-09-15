@@ -1,10 +1,21 @@
 import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { db } from "@/lib/db";
 import { validateCreateProject } from "@/lib/api-validation";
 import {
   getWorkspaceProjects,
   PRODUCT_TEAM_WORKSPACE_ID,
 } from "@/lib/workspace-repository";
+
+function unauthorized() {
+  return NextResponse.json(
+    {
+      error: "UNAUTHORIZED",
+      message: "You must be signed in to perform this action.",
+    },
+    { status: 401 }
+  );
+}
 
 export async function GET() {
   try {
@@ -16,7 +27,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error("GET /api/projects failed:", error);
-
     return NextResponse.json(
       {
         error: "DATABASE_ERROR",
@@ -28,6 +38,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    return unauthorized();
+  }
+
   let payload: unknown;
 
   try {
@@ -133,7 +149,7 @@ export async function POST(request: Request) {
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-          userId: "member-kareem",
+          userId: currentUser.id,
           message: `created ${createdProject.name}`,
         },
       });

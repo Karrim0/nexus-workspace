@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { db } from "@/lib/db";
 import { validateUpdateTask } from "@/lib/api-validation";
 import { PRODUCT_TEAM_WORKSPACE_ID } from "@/lib/workspace-repository";
@@ -9,6 +10,16 @@ type RouteContext = {
     taskId: string;
   }>;
 };
+
+function unauthorized() {
+  return NextResponse.json(
+    {
+      error: "UNAUTHORIZED",
+      message: "You must be signed in to perform this action.",
+    },
+    { status: 401 }
+  );
+}
 
 async function syncProjectProgress(
   tx: Prisma.TransactionClient,
@@ -46,6 +57,12 @@ async function syncProjectProgress(
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    return unauthorized();
+  }
+
   const { taskId } = await context.params;
 
   let payload: unknown;
@@ -103,8 +120,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
-    const nextProjectId = result.data.projectId ?? existingTask.projectId;
-    const nextAssigneeId = result.data.assigneeId ?? existingTask.assigneeId;
+    const nextProjectId =
+      result.data.projectId ?? existingTask.projectId;
+    const nextAssigneeId =
+      result.data.assigneeId ?? existingTask.assigneeId;
 
     if (!nextAssigneeId) {
       return NextResponse.json(
@@ -186,7 +205,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-          userId: "member-kareem",
+          userId: currentUser.id,
           message:
             result.data.status &&
             Object.keys(result.data).length === 1
@@ -224,6 +243,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    return unauthorized();
+  }
+
   const { taskId } = await context.params;
 
   try {
@@ -264,7 +289,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-          userId: "member-kareem",
+          userId: currentUser.id,
           message: `deleted task "${existingTask.title}"`,
         },
       });
