@@ -46,3 +46,9 @@ Currently under active development.
 ## Goal
 
 The goal of Nexus Workspace is to build a complete full-stack SaaS-style application while demonstrating practical skills in frontend architecture, backend development, APIs, authentication, databases, and deployment.
+- Credential-based authentication with secure password hashing
+- Signed HTTP-only session cookies
+- Protected workspace routes
+- Current-user account menu and logout
+- Authenticated project, task, and team mutations
+- Activity logs tied to the authenticated user
