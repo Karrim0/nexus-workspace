@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { db } from "@/lib/db";
 import { validateUpdateMember } from "@/lib/team-validation";
 import { PRODUCT_TEAM_WORKSPACE_ID } from "@/lib/workspace-repository";
@@ -9,7 +10,27 @@ type RouteContext = {
   }>;
 };
 
+function unauthorized() {
+  return NextResponse.json(
+    {
+      error: "UNAUTHORIZED",
+      message: "You must be signed in to perform this action.",
+    },
+    { status: 401 }
+  );
+}
+
+function isOwnerRole(role: string) {
+  return role.trim().toLowerCase() === "owner";
+}
+
 export async function PATCH(request: Request, context: RouteContext) {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    return unauthorized();
+  }
+
   const { memberId } = await context.params;
 
   let payload: unknown;
@@ -59,8 +80,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
+    const owner = isOwnerRole(membership.role);
+
     if (
-      memberId === "member-kareem" &&
+      owner &&
       result.data.status &&
       result.data.status !== "Active"
     ) {
@@ -68,6 +91,20 @@ export async function PATCH(request: Request, context: RouteContext) {
         {
           error: "OWNER_STATUS_PROTECTED",
           message: "The workspace owner must remain active.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      owner &&
+      result.data.role &&
+      !isOwnerRole(result.data.role)
+    ) {
+      return NextResponse.json(
+        {
+          error: "OWNER_ROLE_PROTECTED",
+          message: "The workspace owner role cannot be changed.",
         },
         { status: 400 }
       );
@@ -91,7 +128,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-          userId: "member-kareem",
+          userId: currentUser.id,
           message: `updated ${membership.user.name}'s workspace access`,
         },
       });
@@ -124,17 +161,13 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  const { memberId } = await context.params;
+  const currentUser = await getCurrentUser();
 
-  if (memberId === "member-kareem") {
-    return NextResponse.json(
-      {
-        error: "OWNER_DELETE_PROTECTED",
-        message: "The workspace owner cannot be removed.",
-      },
-      { status: 400 }
-    );
+  if (!currentUser) {
+    return unauthorized();
   }
+
+  const { memberId } = await context.params;
 
   try {
     const membership = await db.workspaceMember.findFirst({
@@ -154,6 +187,16 @@ export async function DELETE(_request: Request, context: RouteContext) {
           message: "This workspace member does not exist.",
         },
         { status: 404 }
+      );
+    }
+
+    if (isOwnerRole(membership.role)) {
+      return NextResponse.json(
+        {
+          error: "OWNER_DELETE_PROTECTED",
+          message: "The workspace owner cannot be removed.",
+        },
+        { status: 400 }
       );
     }
 
@@ -192,7 +235,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-          userId: "member-kareem",
+          userId: currentUser.id,
           message: `removed ${membership.user.name} from the workspace`,
         },
       });

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { db } from "@/lib/db";
 import { validateInviteMember } from "@/lib/team-validation";
 import {
@@ -15,7 +16,23 @@ function createInitials(name: string) {
     .join("");
 }
 
+function unauthorized() {
+  return NextResponse.json(
+    {
+      error: "UNAUTHORIZED",
+      message: "You must be signed in to perform this action.",
+    },
+    { status: 401 }
+  );
+}
+
 export async function GET() {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    return unauthorized();
+  }
+
   try {
     const members = await getWorkspaceMembers();
 
@@ -36,6 +53,12 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const currentUser = await getCurrentUser();
+
+  if (!currentUser) {
+    return unauthorized();
+  }
+
   let payload: unknown;
 
   try {
@@ -109,7 +132,7 @@ export async function POST(request: Request) {
           data: {
             id: crypto.randomUUID(),
             workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-            userId: "member-kareem",
+            userId: currentUser.id,
             message: `invited ${existingUser.name} to the workspace`,
           },
         });
@@ -158,7 +181,7 @@ export async function POST(request: Request) {
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-          userId: "member-kareem",
+          userId: currentUser.id,
           message: `invited ${user.name} to the workspace`,
         },
       });

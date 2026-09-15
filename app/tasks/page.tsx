@@ -1,7 +1,9 @@
+import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
 import { TaskCard } from "@/components/tasks/task-card";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import {
   getWorkspaceMembers,
   getWorkspaceProjects,
@@ -13,14 +15,19 @@ export const dynamic = "force-dynamic";
 const columns = ["Todo", "In Progress", "Review", "Done"] as const;
 
 export default async function TasksPage() {
-  const [tasks, projects, members] = await Promise.all([
+  const [currentUser, tasks, projects, members] = await Promise.all([
+    getCurrentUser(),
     getWorkspaceTasks(),
     getWorkspaceProjects(),
     getWorkspaceMembers(),
   ]);
 
+  if (!currentUser) {
+    redirect("/login");
+  }
+
   const assignedTasks = tasks.filter(
-    (task) => task.assigneeId === "member-kareem"
+    (task) => task.assigneeId === currentUser.id
   );
 
   const projectOptions = projects.map((project) => ({
@@ -114,6 +121,7 @@ export default async function TasksPage() {
                           const project = projects.find(
                             (item) => item.id === task.projectId
                           );
+
                           const assignee = members.find(
                             (item) => item.id === task.assigneeId
                           );
