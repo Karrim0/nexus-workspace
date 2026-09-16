@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import {
+  canCreateTaskForAssignee,
+  getCurrentWorkspaceAccess,
+} from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 import { validateCreateTask } from "@/lib/api-validation";
 import {
@@ -7,17 +10,34 @@ import {
   PRODUCT_TEAM_WORKSPACE_ID,
 } from "@/lib/workspace-repository";
 
-function unauthorized() {
+function workspaceAccessRequired() {
   return NextResponse.json(
     {
-      error: "UNAUTHORIZED",
-      message: "You must be signed in to perform this action.",
+      error: "WORKSPACE_ACCESS_REQUIRED",
+      message: "You do not have active access to this workspace.",
     },
-    { status: 401 }
+    { status: 403 }
+  );
+}
+
+function taskCreationForbidden() {
+  return NextResponse.json(
+    {
+      error: "FORBIDDEN",
+      message:
+        "Members can only create tasks assigned to themselves. Owners and admins can assign tasks to anyone.",
+    },
+    { status: 403 }
   );
 }
 
 export async function GET() {
+  const access = await getCurrentWorkspaceAccess();
+
+  if (!access) {
+    return workspaceAccessRequired();
+  }
+
   try {
     const tasks = await getWorkspaceTasks();
 
@@ -39,10 +59,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const currentUser = await getCurrentUser();
+  const access = await getCurrentWorkspaceAccess();
 
-  if (!currentUser) {
-    return unauthorized();
+  if (!access) {
+    return workspaceAccessRequired();
   }
 
   let payload: unknown;
@@ -69,6 +89,10 @@ export async function POST(request: Request) {
       },
       { status: 400 }
     );
+  }
+
+  if (!canCreateTaskForAssignee(access, result.data.assigneeId)) {
+    return taskCreationForbidden();
   }
 
   try {
@@ -155,7 +179,7 @@ export async function POST(request: Request) {
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-          userId: currentUser.id,
+          userId: access.user.id,
           message: `created task "${createdTask.title}" in ${project.name}`,
         },
       });

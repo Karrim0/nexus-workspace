@@ -82,6 +82,24 @@ export function canManageTasks(access: WorkspaceAccess) {
   );
 }
 
+export function canManageAllTasks(access: WorkspaceAccess) {
+  return access.role === "owner" || access.role === "admin";
+}
+
+export function canCreateTaskForAssignee(
+  access: WorkspaceAccess,
+  assigneeId: string
+) {
+  return canManageAllTasks(access) || access.user.id === assigneeId;
+}
+
+export function canUpdateAssignedTaskStatus(
+  access: WorkspaceAccess,
+  assigneeId: string | null
+) {
+  return canManageAllTasks(access) || access.user.id === assigneeId;
+}
+
 export function isWorkspaceOwner(access: WorkspaceAccess) {
   return access.role === "owner";
 }

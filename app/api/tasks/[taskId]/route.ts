@@ -1,6 +1,10 @@
 import { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import {
+  canManageAllTasks,
+  canUpdateAssignedTaskStatus,
+  getCurrentWorkspaceAccess,
+} from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 import { validateUpdateTask } from "@/lib/api-validation";
 import { PRODUCT_TEAM_WORKSPACE_ID } from "@/lib/workspace-repository";
@@ -11,13 +15,36 @@ type RouteContext = {
   }>;
 };
 
-function unauthorized() {
+const MEMBER_ALLOWED_UPDATE_FIELDS = new Set(["status"]);
+
+function workspaceAccessRequired() {
   return NextResponse.json(
     {
-      error: "UNAUTHORIZED",
-      message: "You must be signed in to perform this action.",
+      error: "WORKSPACE_ACCESS_REQUIRED",
+      message: "You do not have active access to this workspace.",
     },
-    { status: 401 }
+    { status: 403 }
+  );
+}
+
+function taskUpdateForbidden() {
+  return NextResponse.json(
+    {
+      error: "FORBIDDEN",
+      message:
+        "Members can only update the status of tasks assigned to themselves.",
+    },
+    { status: 403 }
+  );
+}
+
+function taskDeleteForbidden() {
+  return NextResponse.json(
+    {
+      error: "FORBIDDEN",
+      message: "Only workspace owners and admins can delete tasks.",
+    },
+    { status: 403 }
   );
 }
 
@@ -57,10 +84,10 @@ async function syncProjectProgress(
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const currentUser = await getCurrentUser();
+  const access = await getCurrentWorkspaceAccess();
 
-  if (!currentUser) {
-    return unauthorized();
+  if (!access) {
+    return workspaceAccessRequired();
   }
 
   const { taskId } = await context.params;
@@ -118,6 +145,20 @@ export async function PATCH(request: Request, context: RouteContext) {
         },
         { status: 404 }
       );
+    }
+
+    if (!canManageAllTasks(access)) {
+      const requestedFields = Object.keys(result.data);
+      const onlyStatusUpdate = requestedFields.every((field) =>
+        MEMBER_ALLOWED_UPDATE_FIELDS.has(field)
+      );
+
+      if (
+        !onlyStatusUpdate ||
+        !canUpdateAssignedTaskStatus(access, existingTask.assigneeId)
+      ) {
+        return taskUpdateForbidden();
+      }
     }
 
     const nextProjectId =
@@ -205,7 +246,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-          userId: currentUser.id,
+          userId: access.user.id,
           message:
             result.data.status &&
             Object.keys(result.data).length === 1
@@ -243,10 +284,14 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  const currentUser = await getCurrentUser();
+  const access = await getCurrentWorkspaceAccess();
 
-  if (!currentUser) {
-    return unauthorized();
+  if (!access) {
+    return workspaceAccessRequired();
+  }
+
+  if (!canManageAllTasks(access)) {
+    return taskDeleteForbidden();
   }
 
   const { taskId } = await context.params;
@@ -289,7 +334,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-          userId: currentUser.id,
+          userId: access.user.id,
           message: `deleted task "${existingTask.title}"`,
         },
       });
