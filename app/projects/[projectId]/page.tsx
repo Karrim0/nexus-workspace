@@ -4,6 +4,10 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { ProjectActions } from "@/components/projects/project-actions";
 import {
+  canManageProjects,
+  getCurrentWorkspaceAccess,
+} from "@/lib/auth/workspace-access";
+import {
   getWorkspaceMembers,
   getWorkspaceProjectById,
 } from "@/lib/workspace-repository";
@@ -19,6 +23,31 @@ type ProjectDetailsPageProps = {
 export default async function ProjectDetailsPage({
   params,
 }: ProjectDetailsPageProps) {
+  const access = await getCurrentWorkspaceAccess();
+
+  if (!access) {
+    return (
+      <main className="min-h-screen bg-zinc-950 text-white">
+        <div className="flex min-h-screen">
+          <Sidebar />
+          <section className="min-w-0 flex-1">
+            <Topbar />
+            <div className="px-5 py-8 sm:px-8">
+              <section className="rounded-2xl border border-amber-900/40 bg-amber-950/20 p-6">
+                <p className="text-sm font-semibold text-amber-300">
+                  Workspace access required
+                </p>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+                  Your account does not have active access to this workspace.
+                </p>
+              </section>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
   const { projectId } = await params;
 
   const [project, members] = await Promise.all([
@@ -29,6 +58,8 @@ export default async function ProjectDetailsPage({
   if (!project) {
     notFound();
   }
+
+  const canManage = canManageProjects(access);
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -56,6 +87,12 @@ export default async function ProjectDetailsPage({
                   <span className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-400">
                     {project.status}
                   </span>
+
+                  {!canManage ? (
+                    <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs text-zinc-500">
+                      Read only
+                    </span>
+                  ) : null}
                 </div>
 
                 <p className="mt-3 leading-7 text-zinc-500">
@@ -73,20 +110,22 @@ export default async function ProjectDetailsPage({
                   </p>
                 </div>
 
-                <ProjectActions
-                  project={{
-                    id: project.id,
-                    name: project.name,
-                    description: project.description,
-                    status: project.status,
-                    memberIds: project.members.map((member) => member.id),
-                  }}
-                  members={members.map((member) => ({
-                    id: member.id,
-                    name: member.name,
-                    initials: member.initials,
-                  }))}
-                />
+                {canManage ? (
+                  <ProjectActions
+                    project={{
+                      id: project.id,
+                      name: project.name,
+                      description: project.description,
+                      status: project.status,
+                      memberIds: project.members.map((member) => member.id),
+                    }}
+                    members={members.map((member) => ({
+                      id: member.id,
+                      name: member.name,
+                      initials: member.initials,
+                    }))}
+                  />
+                ) : null}
               </div>
             </div>
 
@@ -151,7 +190,6 @@ export default async function ProjectDetailsPage({
                         <span className="rounded-full bg-zinc-800 px-3 py-1 text-xs text-zinc-300">
                           {task.status}
                         </span>
-
                         <div
                           title={task.assignee?.name}
                           className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-[10px] font-semibold"
@@ -182,7 +220,6 @@ export default async function ProjectDetailsPage({
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800 text-xs font-semibold">
                         {member.initials}
                       </div>
-
                       <div className="min-w-0">
                         <p className="text-sm font-medium">{member.name}</p>
                         <p className="truncate text-xs text-zinc-600">

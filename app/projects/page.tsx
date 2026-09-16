@@ -3,6 +3,10 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import {
+  canManageProjects,
+  getCurrentWorkspaceAccess,
+} from "@/lib/auth/workspace-access";
+import {
   getWorkspaceMembers,
   getWorkspaceProjects,
 } from "@/lib/workspace-repository";
@@ -10,10 +14,38 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function ProjectsPage() {
+  const access = await getCurrentWorkspaceAccess();
+
+  if (!access) {
+    return (
+      <main className="min-h-screen bg-zinc-950 text-white">
+        <div className="flex min-h-screen">
+          <Sidebar />
+          <section className="min-w-0 flex-1">
+            <Topbar />
+            <div className="px-5 py-8 sm:px-8">
+              <section className="rounded-2xl border border-amber-900/40 bg-amber-950/20 p-6">
+                <p className="text-sm font-semibold text-amber-300">
+                  Workspace access required
+                </p>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
+                  Your account is authenticated, but it does not have an active
+                  membership in this workspace.
+                </p>
+              </section>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
   const [projects, members] = await Promise.all([
     getWorkspaceProjects(),
     getWorkspaceMembers(),
   ]);
+
+  const canManage = canManageProjects(access);
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -35,13 +67,29 @@ export default async function ProjectsPage() {
                 </p>
               </div>
 
-              <NewProjectDialog
-                members={members.map((member) => ({
-                  id: member.id,
-                  name: member.name,
-                  initials: member.initials,
-                }))}
-              />
+              {canManage ? (
+                <NewProjectDialog
+                  members={members.map((member) => ({
+                    id: member.id,
+                    name: member.name,
+                    initials: member.initials,
+                  }))}
+                />
+              ) : null}
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 text-zinc-400">
+                Signed in as {access.user.name}
+              </span>
+              <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1.5 font-medium capitalize text-zinc-300">
+                {access.role}
+              </span>
+              {!canManage ? (
+                <span className="text-zinc-600">
+                  Project management is read-only for your role.
+                </span>
+              ) : null}
             </div>
 
             <div className="mt-8 grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
