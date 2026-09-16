@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type MemberActionsProps = {
+  canManage: boolean;
   member: {
     id: string;
     name: string;
@@ -12,13 +13,15 @@ type MemberActionsProps = {
   };
 };
 
-export function MemberActions({ member }: MemberActionsProps) {
+export function MemberActions({
+  canManage,
+  member,
+}: MemberActionsProps) {
   const router = useRouter();
-  const isOwner = member.id === "member-kareem";
+  const isOwner = member.role.trim().toLowerCase() === "owner";
 
   const [editOpen, setEditOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
-
   const [role, setRole] = useState(member.role);
   const [status, setStatus] = useState(member.status);
   const [error, setError] = useState("");
@@ -30,6 +33,10 @@ export function MemberActions({ member }: MemberActionsProps) {
     [role, submitting]
   );
 
+  if (!canManage || isOwner) {
+    return null;
+  }
+
   function resetEditForm() {
     setRole(member.role);
     setStatus(member.status);
@@ -38,6 +45,7 @@ export function MemberActions({ member }: MemberActionsProps) {
 
   function closeEdit() {
     if (submitting) return;
+
     setEditOpen(false);
     resetEditForm();
   }
@@ -83,7 +91,7 @@ export function MemberActions({ member }: MemberActionsProps) {
   }
 
   async function handleRemove() {
-    if (removing || isOwner) return;
+    if (removing) return;
 
     setRemoving(true);
     setError("");
@@ -125,13 +133,11 @@ export function MemberActions({ member }: MemberActionsProps) {
 
         <button
           type="button"
-          disabled={isOwner}
           onClick={() => {
             setError("");
             setRemoveOpen(true);
           }}
-          title={isOwner ? "The workspace owner cannot be removed" : undefined}
-          className="rounded-lg border border-red-950 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-950/30 disabled:cursor-not-allowed disabled:opacity-35"
+          className="rounded-lg border border-red-950 px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-950/30"
         >
           Remove
         </button>
@@ -160,6 +166,7 @@ export function MemberActions({ member }: MemberActionsProps) {
                 >
                   Manage member
                 </h2>
+
                 <p className="mt-1 text-sm text-zinc-500">
                   Update {member.name}&apos;s workspace role and access status.
                 </p>
@@ -183,6 +190,7 @@ export function MemberActions({ member }: MemberActionsProps) {
                 >
                   Role
                 </label>
+
                 <input
                   id={`member-role-${member.id}`}
                   value={role}
@@ -198,22 +206,16 @@ export function MemberActions({ member }: MemberActionsProps) {
                 >
                   Status
                 </label>
+
                 <select
                   id={`member-status-${member.id}`}
                   value={status}
-                  disabled={isOwner}
                   onChange={(event) => setStatus(event.target.value)}
-                  className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm outline-none focus:border-zinc-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm outline-none focus:border-zinc-600"
                 >
                   <option value="Active">Active</option>
                   <option value="Invited">Invited</option>
                 </select>
-
-                {isOwner ? (
-                  <p className="mt-2 text-xs text-zinc-600">
-                    The workspace owner must remain active.
-                  </p>
-                ) : null}
               </div>
 
               {error ? (
@@ -226,7 +228,8 @@ export function MemberActions({ member }: MemberActionsProps) {
                 <button
                   type="button"
                   onClick={closeEdit}
-                  className="rounded-xl border border-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-900"
+                  disabled={submitting}
+                  className="rounded-xl border border-zinc-800 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:bg-zinc-900 disabled:opacity-50"
                 >
                   Cancel
                 </button>
@@ -261,7 +264,9 @@ export function MemberActions({ member }: MemberActionsProps) {
 
             <p className="mt-3 text-sm leading-6 text-zinc-500">
               This will remove{" "}
-              <span className="font-medium text-zinc-300">{member.name}</span>{" "}
+              <span className="font-medium text-zinc-300">
+                {member.name}
+              </span>{" "}
               from the workspace. Their assigned tasks will become unassigned.
             </p>
 
