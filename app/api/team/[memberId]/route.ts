@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import {
+  canManageWorkspaceMembers,
+  getCurrentWorkspaceAccess,
+} from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 import { validateUpdateMember } from "@/lib/team-validation";
 import { PRODUCT_TEAM_WORKSPACE_ID } from "@/lib/workspace-repository";
@@ -10,13 +13,23 @@ type RouteContext = {
   }>;
 };
 
-function unauthorized() {
+function workspaceAccessRequired() {
   return NextResponse.json(
     {
-      error: "UNAUTHORIZED",
-      message: "You must be signed in to perform this action.",
+      error: "WORKSPACE_ACCESS_REQUIRED",
+      message: "You do not have active access to this workspace.",
     },
-    { status: 401 }
+    { status: 403 }
+  );
+}
+
+function memberManagementForbidden() {
+  return NextResponse.json(
+    {
+      error: "FORBIDDEN",
+      message: "Only workspace owners and admins can manage members.",
+    },
+    { status: 403 }
   );
 }
 
@@ -25,10 +38,14 @@ function isOwnerRole(role: string) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const currentUser = await getCurrentUser();
+  const access = await getCurrentWorkspaceAccess();
 
-  if (!currentUser) {
-    return unauthorized();
+  if (!access) {
+    return workspaceAccessRequired();
+  }
+
+  if (!canManageWorkspaceMembers(access)) {
+    return memberManagementForbidden();
   }
 
   const { memberId } = await context.params;
@@ -82,6 +99,16 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const owner = isOwnerRole(membership.role);
 
+    if (owner && access.role !== "owner") {
+      return NextResponse.json(
+        {
+          error: "OWNER_PROTECTED",
+          message: "Only the workspace owner can manage the owner account.",
+        },
+        { status: 403 }
+      );
+    }
+
     if (
       owner &&
       result.data.status &&
@@ -128,7 +155,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-          userId: currentUser.id,
+          userId: access.user.id,
           message: `updated ${membership.user.name}'s workspace access`,
         },
       });
@@ -161,10 +188,14 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  const currentUser = await getCurrentUser();
+  const access = await getCurrentWorkspaceAccess();
 
-  if (!currentUser) {
-    return unauthorized();
+  if (!access) {
+    return workspaceAccessRequired();
+  }
+
+  if (!canManageWorkspaceMembers(access)) {
+    return memberManagementForbidden();
   }
 
   const { memberId } = await context.params;
@@ -235,7 +266,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-          userId: currentUser.id,
+          userId: access.user.id,
           message: `removed ${membership.user.name} from the workspace`,
         },
       });

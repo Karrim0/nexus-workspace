@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth/current-user";
+import {
+  canManageWorkspaceMembers,
+  getCurrentWorkspaceAccess,
+} from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 import { validateInviteMember } from "@/lib/team-validation";
 import {
@@ -26,11 +29,31 @@ function unauthorized() {
   );
 }
 
-export async function GET() {
-  const currentUser = await getCurrentUser();
+function workspaceAccessRequired() {
+  return NextResponse.json(
+    {
+      error: "WORKSPACE_ACCESS_REQUIRED",
+      message: "You do not have active access to this workspace.",
+    },
+    { status: 403 }
+  );
+}
 
-  if (!currentUser) {
-    return unauthorized();
+function memberManagementForbidden() {
+  return NextResponse.json(
+    {
+      error: "FORBIDDEN",
+      message: "Only workspace owners and admins can manage members.",
+    },
+    { status: 403 }
+  );
+}
+
+export async function GET() {
+  const access = await getCurrentWorkspaceAccess();
+
+  if (!access) {
+    return workspaceAccessRequired();
   }
 
   try {
@@ -53,10 +76,14 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const currentUser = await getCurrentUser();
+  const access = await getCurrentWorkspaceAccess();
 
-  if (!currentUser) {
-    return unauthorized();
+  if (!access) {
+    return workspaceAccessRequired();
+  }
+
+  if (!canManageWorkspaceMembers(access)) {
+    return memberManagementForbidden();
   }
 
   let payload: unknown;
@@ -132,7 +159,7 @@ export async function POST(request: Request) {
           data: {
             id: crypto.randomUUID(),
             workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-            userId: currentUser.id,
+            userId: access.user.id,
             message: `invited ${existingUser.name} to the workspace`,
           },
         });
@@ -181,7 +208,7 @@ export async function POST(request: Request) {
         data: {
           id: crypto.randomUUID(),
           workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-          userId: currentUser.id,
+          userId: access.user.id,
           message: `invited ${user.name} to the workspace`,
         },
       });
