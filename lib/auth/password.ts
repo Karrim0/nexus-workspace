@@ -9,10 +9,15 @@ const scrypt = promisify(nodeScrypt);
 
 const KEY_LENGTH = 64;
 const SALT_BYTES = 16;
+const LOGIN_PADDING_SALT = "nexus-login-padding-v1";
 
 export async function hashPassword(password: string) {
   const salt = randomBytes(SALT_BYTES).toString("hex");
-  const derivedKey = (await scrypt(password, salt, KEY_LENGTH)) as Buffer;
+  const derivedKey = (await scrypt(
+    password,
+    salt,
+    KEY_LENGTH
+  )) as Buffer;
 
   return `scrypt:${salt}:${derivedKey.toString("hex")}`;
 }
@@ -33,7 +38,23 @@ export async function verifyPassword(
     return false;
   }
 
-  const derivedKey = (await scrypt(password, salt, KEY_LENGTH)) as Buffer;
+  const derivedKey = (await scrypt(
+    password,
+    salt,
+    KEY_LENGTH
+  )) as Buffer;
 
   return timingSafeEqual(storedKey, derivedKey);
+}
+
+export async function burnPasswordVerification(
+  password: string
+) {
+  await scrypt(
+    password,
+    LOGIN_PADDING_SALT,
+    KEY_LENGTH
+  );
+
+  return false;
 }

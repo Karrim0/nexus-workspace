@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
-import { verifyPassword } from "@/lib/auth/password";
+import {
+  burnPasswordVerification,
+  verifyPassword,
+} from "@/lib/auth/password";
 import {
   findUserByEmail,
   getPasswordHash,
@@ -9,14 +11,23 @@ import {
   getSessionCookieOptions,
 } from "@/lib/auth/session";
 import { validateLogin } from "@/lib/auth/validation";
+import {
+  authJson,
+  crossSiteMutationResponse,
+  isTrustedMutationRequest,
+} from "@/lib/auth/http";
 
 export async function POST(request: Request) {
+  if (!isTrustedMutationRequest(request)) {
+    return crossSiteMutationResponse();
+  }
+
   let payload: unknown;
 
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json(
+    return authJson(
       {
         error: "INVALID_JSON",
         message: "Request body must contain valid JSON.",
@@ -28,7 +39,7 @@ export async function POST(request: Request) {
   const result = validateLogin(payload);
 
   if (!result.success) {
-    return NextResponse.json(
+    return authJson(
       {
         error: "VALIDATION_ERROR",
         errors: result.errors,
@@ -40,35 +51,21 @@ export async function POST(request: Request) {
   try {
     const user = await findUserByEmail(result.data.email);
 
-    if (!user) {
-      return NextResponse.json(
-        {
-          error: "INVALID_CREDENTIALS",
-          message: "Email or password is incorrect.",
-        },
-        { status: 401 }
-      );
-    }
+    const passwordHash = user
+      ? await getPasswordHash(user.id)
+      : null;
 
-    const passwordHash = await getPasswordHash(user.id);
+    const passwordMatches = passwordHash
+      ? await verifyPassword(
+          result.data.password,
+          passwordHash
+        )
+      : await burnPasswordVerification(
+          result.data.password
+        );
 
-    if (!passwordHash) {
-      return NextResponse.json(
-        {
-          error: "INVALID_CREDENTIALS",
-          message: "Email or password is incorrect.",
-        },
-        { status: 401 }
-      );
-    }
-
-    const passwordMatches = await verifyPassword(
-      result.data.password,
-      passwordHash
-    );
-
-    if (!passwordMatches) {
-      return NextResponse.json(
+    if (!user || !passwordHash || !passwordMatches) {
+      return authJson(
         {
           error: "INVALID_CREDENTIALS",
           message: "Email or password is incorrect.",
@@ -80,7 +77,7 @@ export async function POST(request: Request) {
     const token = createSessionToken(user.id);
     const cookie = getSessionCookieOptions();
 
-    const response = NextResponse.json({
+    const response = authJson({
       data: {
         id: user.id,
         name: user.name,
@@ -99,7 +96,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("POST /api/auth/login failed:", error);
 
-    return NextResponse.json(
+    return authJson(
       {
         error: "AUTH_ERROR",
         message: "Unable to sign in.",

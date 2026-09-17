@@ -13,12 +13,24 @@ export type LoginInput = {
   password: string;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+const MAX_NAME_LENGTH = 80;
+const MAX_EMAIL_LENGTH = 254;
+const MAX_PASSWORD_LENGTH = 128;
+
+function isRecord(
+  value: unknown
+): value is Record<string, unknown> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value)
+  );
 }
 
 function normalizeEmail(value: unknown) {
-  return typeof value === "string" ? value.trim().toLowerCase() : "";
+  return typeof value === "string"
+    ? value.trim().toLowerCase()
+    : "";
 }
 
 function isEmail(value: string) {
@@ -36,10 +48,16 @@ export function validateSignup(
   }
 
   const name =
-    typeof payload.name === "string" ? payload.name.trim() : "";
+    typeof payload.name === "string"
+      ? payload.name.trim()
+      : "";
+
   const email = normalizeEmail(payload.email);
+
   const password =
-    typeof payload.password === "string" ? payload.password : "";
+    typeof payload.password === "string"
+      ? payload.password
+      : "";
 
   const errors: string[] = [];
 
@@ -47,12 +65,28 @@ export function validateSignup(
     errors.push("Name must be at least 2 characters.");
   }
 
+  if (name.length > MAX_NAME_LENGTH) {
+    errors.push(
+      `Name must be ${MAX_NAME_LENGTH} characters or fewer.`
+    );
+  }
+
   if (!email || !isEmail(email)) {
     errors.push("A valid email address is required.");
   }
 
+  if (email.length > MAX_EMAIL_LENGTH) {
+    errors.push("Email address is too long.");
+  }
+
   if (password.length < 8) {
     errors.push("Password must be at least 8 characters.");
+  }
+
+  if (password.length > MAX_PASSWORD_LENGTH) {
+    errors.push(
+      `Password must be ${MAX_PASSWORD_LENGTH} characters or fewer.`
+    );
   }
 
   if (errors.length > 0) {
@@ -83,8 +117,11 @@ export function validateLogin(
   }
 
   const email = normalizeEmail(payload.email);
+
   const password =
-    typeof payload.password === "string" ? payload.password : "";
+    typeof payload.password === "string"
+      ? payload.password
+      : "";
 
   const errors: string[] = [];
 
@@ -92,8 +129,16 @@ export function validateLogin(
     errors.push("A valid email address is required.");
   }
 
+  if (email.length > MAX_EMAIL_LENGTH) {
+    errors.push("Email address is too long.");
+  }
+
   if (!password) {
     errors.push("Password is required.");
+  }
+
+  if (password.length > MAX_PASSWORD_LENGTH) {
+    errors.push("Password is too long.");
   }
 
   if (errors.length > 0) {

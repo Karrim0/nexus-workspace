@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { hashPassword } from "@/lib/auth/password";
 import {
   createUserWithPassword,
@@ -9,14 +9,23 @@ import {
   getSessionCookieOptions,
 } from "@/lib/auth/session";
 import { validateSignup } from "@/lib/auth/validation";
+import {
+  authJson,
+  crossSiteMutationResponse,
+  isTrustedMutationRequest,
+} from "@/lib/auth/http";
 
 export async function POST(request: Request) {
+  if (!isTrustedMutationRequest(request)) {
+    return crossSiteMutationResponse();
+  }
+
   let payload: unknown;
 
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json(
+    return authJson(
       {
         error: "INVALID_JSON",
         message: "Request body must contain valid JSON.",
@@ -28,7 +37,7 @@ export async function POST(request: Request) {
   const result = validateSignup(payload);
 
   if (!result.success) {
-    return NextResponse.json(
+    return authJson(
       {
         error: "VALIDATION_ERROR",
         errors: result.errors,
@@ -38,19 +47,24 @@ export async function POST(request: Request) {
   }
 
   try {
-    const existingUser = await findUserByEmail(result.data.email);
+    const existingUser = await findUserByEmail(
+      result.data.email
+    );
 
     if (existingUser) {
-      return NextResponse.json(
+      return authJson(
         {
           error: "EMAIL_IN_USE",
-          message: "An account with this email already exists.",
+          message:
+            "An account with this email already exists.",
         },
         { status: 409 }
       );
     }
 
-    const passwordHash = await hashPassword(result.data.password);
+    const passwordHash = await hashPassword(
+      result.data.password
+    );
 
     const user = await createUserWithPassword({
       name: result.data.name,
@@ -61,7 +75,7 @@ export async function POST(request: Request) {
     const token = createSessionToken(user.id);
     const cookie = getSessionCookieOptions();
 
-    const response = NextResponse.json(
+    const response = authJson(
       {
         data: {
           id: user.id,
@@ -81,9 +95,23 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return authJson(
+        {
+          error: "EMAIL_IN_USE",
+          message:
+            "An account with this email already exists.",
+        },
+        { status: 409 }
+      );
+    }
+
     console.error("POST /api/auth/signup failed:", error);
 
-    return NextResponse.json(
+    return authJson(
       {
         error: "AUTH_ERROR",
         message: "Unable to create account.",
