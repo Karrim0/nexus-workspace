@@ -1,5 +1,11 @@
+import Link from "next/link";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { WorkspaceAccessRequired } from "@/components/auth/workspace-access-required";
+import {
+  canManageProjects,
+  getCurrentWorkspaceAccess,
+} from "@/lib/auth/workspace-access";
 import {
   getWorkspaceActivity,
   getWorkspaceMembers,
@@ -10,6 +16,26 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const access = await getCurrentWorkspaceAccess();
+
+  if (!access) {
+    return (
+      <main className="min-h-screen bg-zinc-950 text-white">
+        <div className="flex min-h-screen">
+          <Sidebar />
+
+          <section className="min-w-0 flex-1">
+            <Topbar />
+
+            <div className="px-5 py-8 sm:px-8">
+              <WorkspaceAccessRequired />
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
   const [projects, tasks, members, activities] = await Promise.all([
     getWorkspaceProjects(),
     getWorkspaceTasks(),
@@ -20,19 +46,33 @@ export default async function DashboardPage() {
   const activeProjects = projects.filter(
     (project) => project.status !== "Completed"
   );
+
   const openTasks = tasks.filter((task) => task.status !== "Done");
-  const activeMembers = members.filter((member) => member.status === "Active");
+
+  const activeMembers = members.filter(
+    (member) => member.status === "Active"
+  );
+
+  const myOpenTasks = tasks.filter(
+    (task) =>
+      task.assigneeId === access.user.id &&
+      task.status !== "Done"
+  );
 
   const totalCompletedTasks = projects.reduce(
     (sum, project) => sum + project.completedTasks,
     0
   );
+
   const totalTasks = projects.reduce(
     (sum, project) => sum + project.totalTasks,
     0
   );
+
   const completionRate =
-    totalTasks === 0 ? 0 : Math.round((totalCompletedTasks / totalTasks) * 100);
+    totalTasks === 0
+      ? 0
+      : Math.round((totalCompletedTasks / totalTasks) * 100);
 
   const stats = [
     {
@@ -43,7 +83,7 @@ export default async function DashboardPage() {
     {
       label: "Open Tasks",
       value: String(openTasks.length).padStart(2, "0"),
-      detail: `${tasks.filter((task) => task.priority === "High").length} high priority`,
+      detail: `${myOpenTasks.length} assigned to you`,
     },
     {
       label: "Team Members",
@@ -57,6 +97,8 @@ export default async function DashboardPage() {
     },
   ];
 
+  const canCreateProject = canManageProjects(access);
+
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
       <div className="flex min-h-screen">
@@ -68,18 +110,38 @@ export default async function DashboardPage() {
           <div className="px-5 py-8 sm:px-8">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <p className="text-sm font-medium text-zinc-500">Dashboard</p>
-                <h2 className="mt-1 text-3xl font-semibold tracking-tight">
-                  Good evening, Kareem.
-                </h2>
-                <p className="mt-2 text-sm text-zinc-500">
-                  Live workspace data from PostgreSQL.
+                <p className="text-sm font-medium text-zinc-500">
+                  Dashboard
                 </p>
+
+                <h2 className="mt-1 text-3xl font-semibold tracking-tight">
+                  Good to see you, {access.user.name.split(" ")[0]}.
+                </h2>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
+                  <span>Live workspace data from PostgreSQL.</span>
+
+                  <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-xs font-medium capitalize text-zinc-400">
+                    {access.role}
+                  </span>
+                </div>
               </div>
 
-              <button className="w-fit rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200">
-                + New Project
-              </button>
+              {canCreateProject ? (
+                <Link
+                  href="/projects"
+                  className="w-fit rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200"
+                >
+                  + New Project
+                </Link>
+              ) : (
+                <Link
+                  href="/tasks"
+                  className="w-fit rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition hover:border-zinc-700 hover:text-white"
+                >
+                  View My Tasks
+                </Link>
+              )}
             </div>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -128,6 +190,12 @@ export default async function DashboardPage() {
                       </div>
                     </div>
                   ))}
+
+                  {activeProjects.length === 0 ? (
+                    <div className="px-5 py-10 text-center text-sm text-zinc-600">
+                      No active projects yet.
+                    </div>
+                  ) : null}
                 </div>
               </section>
 
@@ -156,18 +224,28 @@ export default async function DashboardPage() {
                             </span>{" "}
                             {activity.message}
                           </p>
+
                           <p className="mt-1 text-xs text-zinc-600">
-                            {new Date(activity.occurredAt).toLocaleString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                            })}
+                            {new Date(activity.occurredAt).toLocaleString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                hour: "numeric",
+                                minute: "2-digit",
+                              }
+                            )}
                           </p>
                         </div>
                       </div>
                     );
                   })}
+
+                  {activities.length === 0 ? (
+                    <p className="text-sm text-zinc-600">
+                      No workspace activity yet.
+                    </p>
+                  ) : null}
                 </div>
               </section>
             </div>
