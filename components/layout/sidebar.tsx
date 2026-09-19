@@ -9,6 +9,7 @@ const navigation = [
   { label: "My Tasks", shortLabel: "Tasks", href: "/tasks", icon: "T" },
   { label: "Team", shortLabel: "Team", href: "/team", icon: "M" },
   { label: "Activity", shortLabel: "Activity", href: "/activity", icon: "A" },
+  { label: "Insights", shortLabel: "Insights", href: "/insights", icon: "I" },
 ];
 
 function isActivePath(pathname: string, href: string) {
@@ -70,7 +71,7 @@ export function Sidebar() {
           <p className="text-sm font-medium text-white">Nexus Workspace</p>
 
           <p className="mt-1 text-xs leading-5 text-zinc-500">
-            Projects, tasks, team access, and activity in one place.
+            Projects, tasks, team access, activity, and insights in one place.
           </p>
         </div>
       </aside>
@@ -79,7 +80,7 @@ export function Sidebar() {
         aria-label="Mobile workspace navigation"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-zinc-800 bg-zinc-950/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden"
       >
-        <div className="mx-auto grid max-w-xl grid-cols-5">
+        <div className="mx-auto grid max-w-2xl grid-cols-6">
           {navigation.map((item) => {
             const active = isActivePath(pathname, item.href);
 
