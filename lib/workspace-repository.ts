@@ -1,11 +1,35 @@
+import { getCurrentWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 
+/**
+ * Temporary compatibility export for mutation routes that have not yet been
+ * migrated to dynamic workspace IDs.
+ *
+ * Repository reads below DO NOT use this constant anymore.
+ * Remove this export once Day 14 mutation scoping is complete.
+ */
 export const PRODUCT_TEAM_WORKSPACE_ID = "workspace-product-team";
 
-export async function getWorkspaceProjects() {
+async function resolveWorkspaceId(workspaceId?: string) {
+  if (workspaceId) {
+    return workspaceId;
+  }
+
+  const access = await getCurrentWorkspaceAccess();
+
+  return access?.workspaceId ?? null;
+}
+
+export async function getWorkspaceProjects(workspaceId?: string) {
+  const resolvedWorkspaceId = await resolveWorkspaceId(workspaceId);
+
+  if (!resolvedWorkspaceId) {
+    return [];
+  }
+
   const projects = await db.project.findMany({
     where: {
-      workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+      workspaceId: resolvedWorkspaceId,
     },
     include: {
       members: true,
@@ -27,11 +51,20 @@ export async function getWorkspaceProjects() {
   }));
 }
 
-export async function getWorkspaceProjectById(projectId: string) {
+export async function getWorkspaceProjectById(
+  projectId: string,
+  workspaceId?: string
+) {
+  const resolvedWorkspaceId = await resolveWorkspaceId(workspaceId);
+
+  if (!resolvedWorkspaceId) {
+    return null;
+  }
+
   const project = await db.project.findFirst({
     where: {
       id: projectId,
-      workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+      workspaceId: resolvedWorkspaceId,
     },
     include: {
       members: {
@@ -85,11 +118,17 @@ export async function getWorkspaceProjectById(projectId: string) {
   };
 }
 
-export async function getWorkspaceTasks() {
+export async function getWorkspaceTasks(workspaceId?: string) {
+  const resolvedWorkspaceId = await resolveWorkspaceId(workspaceId);
+
+  if (!resolvedWorkspaceId) {
+    return [];
+  }
+
   const tasks = await db.task.findMany({
     where: {
       project: {
-        workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+        workspaceId: resolvedWorkspaceId,
       },
     },
     orderBy: {
@@ -108,10 +147,16 @@ export async function getWorkspaceTasks() {
   }));
 }
 
-export async function getWorkspaceMembers() {
+export async function getWorkspaceMembers(workspaceId?: string) {
+  const resolvedWorkspaceId = await resolveWorkspaceId(workspaceId);
+
+  if (!resolvedWorkspaceId) {
+    return [];
+  }
+
   const memberships = await db.workspaceMember.findMany({
     where: {
-      workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+      workspaceId: resolvedWorkspaceId,
     },
     include: {
       user: true,
@@ -133,10 +178,16 @@ export async function getWorkspaceMembers() {
   }));
 }
 
-export async function getWorkspaceActivity() {
+export async function getWorkspaceActivity(workspaceId?: string) {
+  const resolvedWorkspaceId = await resolveWorkspaceId(workspaceId);
+
+  if (!resolvedWorkspaceId) {
+    return [];
+  }
+
   const activities = await db.activity.findMany({
     where: {
-      workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+      workspaceId: resolvedWorkspaceId,
     },
     orderBy: {
       occurredAt: "desc",
