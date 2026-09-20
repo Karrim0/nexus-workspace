@@ -37,14 +37,14 @@ export function SignupForm() {
 
       if (!response.ok) {
         setError(
-          payload?.errors?.join(" ") ||
+          payload?.errors?.join?.(" ") ||
             payload?.message ||
             "Unable to create account."
         );
         return;
       }
 
-      router.push("/dashboard");
+      router.replace("/onboarding");
       router.refresh();
     } catch {
       setError("Something went wrong while creating your account.");
@@ -62,6 +62,7 @@ export function SignupForm() {
         >
           Full name
         </label>
+
         <input
           id="name"
           name="name"
@@ -83,6 +84,7 @@ export function SignupForm() {
         >
           Email
         </label>
+
         <input
           id="signup-email"
           name="email"
@@ -103,6 +105,7 @@ export function SignupForm() {
         >
           Password
         </label>
+
         <input
           id="signup-password"
           name="password"
@@ -115,6 +118,7 @@ export function SignupForm() {
           required
           className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm outline-none placeholder:text-zinc-600 focus:border-zinc-600"
         />
+
         <p className="mt-2 text-xs text-zinc-600">
           Use at least 8 characters.
         </p>

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
-import { getCurrentWorkspaceAccess } from "@/lib/auth/workspace-access";
+import { getWorkspaceOnboardingState } from "@/lib/workspaces/onboarding";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +11,10 @@ export default async function Home() {
     redirect("/login");
   }
 
-  const access = await getCurrentWorkspaceAccess();
+  const state = await getWorkspaceOnboardingState(user.id);
 
-  if (!access) {
-    redirect("/access-denied");
+  if (state.needsWorkspace) {
+    redirect("/onboarding");
   }
 
   redirect("/dashboard");

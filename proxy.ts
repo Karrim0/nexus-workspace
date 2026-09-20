@@ -8,6 +8,9 @@ const protectedPrefixes = [
   "/tasks",
   "/team",
   "/activity",
+  "/search",
+  "/insights",
+  "/onboarding",
 ];
 
 const guestOnlyPaths = new Set(["/login", "/signup"]);
@@ -43,7 +46,7 @@ export default async function proxy(request: NextRequest) {
   }
 
   if (guestOnlyPaths.has(pathname) && session) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();
@@ -56,6 +59,9 @@ export const config = {
     "/tasks/:path*",
     "/team/:path*",
     "/activity/:path*",
+    "/search/:path*",
+    "/insights/:path*",
+    "/onboarding/:path*",
     "/login",
     "/signup",
   ],

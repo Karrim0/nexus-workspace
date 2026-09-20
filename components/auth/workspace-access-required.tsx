@@ -6,8 +6,8 @@ type WorkspaceAccessRequiredProps = {
 };
 
 export function WorkspaceAccessRequired({
-  title = "Workspace access required",
-  description = "Your account is signed in, but it does not have an active workspace membership yet.",
+  title = "Workspace setup required",
+  description = "Your account is signed in, but it does not have an active workspace yet.",
 }: WorkspaceAccessRequiredProps) {
   return (
     <section className="rounded-2xl border border-amber-900/40 bg-amber-950/20 p-6">
@@ -19,17 +19,17 @@ export function WorkspaceAccessRequired({
 
       <div className="mt-5 flex flex-wrap gap-3">
         <Link
+          href="/onboarding"
+          className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-zinc-200"
+        >
+          Create workspace
+        </Link>
+
+        <Link
           href="/access-denied"
           className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-300 transition hover:border-zinc-700 hover:text-white"
         >
           View access details
-        </Link>
-
-        <Link
-          href="/"
-          className="rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-500 transition hover:text-white"
-        >
-          Back home
         </Link>
       </div>
     </section>
