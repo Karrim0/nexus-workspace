@@ -5,7 +5,6 @@ import {
 } from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 import { validateUpdateProject } from "@/lib/api-validation";
-import { PRODUCT_TEAM_WORKSPACE_ID } from "@/lib/workspace-repository";
 
 type RouteContext = {
   params: Promise<{
@@ -76,7 +75,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const existingProject = await db.project.findFirst({
       where: {
         id: projectId,
-        workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+        workspaceId: access.workspaceId,
       },
       select: {
         id: true,
@@ -96,7 +95,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const validMembers = await db.workspaceMember.findMany({
       where: {
-        workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+        workspaceId: access.workspaceId,
         userId: {
           in: result.data.memberIds,
         },
@@ -154,7 +153,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       await tx.activity.create({
         data: {
           id: crypto.randomUUID(),
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
           userId: access.user.id,
           message: `updated ${updated.name}`,
         },
@@ -206,7 +205,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     const existingProject = await db.project.findFirst({
       where: {
         id: projectId,
-        workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+        workspaceId: access.workspaceId,
       },
       select: {
         id: true,
@@ -234,7 +233,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       await tx.activity.create({
         data: {
           id: crypto.randomUUID(),
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
           userId: access.user.id,
           message: `deleted ${existingProject.name}`,
         },

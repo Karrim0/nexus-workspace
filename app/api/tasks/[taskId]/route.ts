@@ -7,7 +7,6 @@ import {
 } from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 import { validateUpdateTask } from "@/lib/api-validation";
-import { PRODUCT_TEAM_WORKSPACE_ID } from "@/lib/workspace-repository";
 
 type RouteContext = {
   params: Promise<{
@@ -123,7 +122,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       where: {
         id: taskId,
         project: {
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
         },
       },
       select: {
@@ -180,7 +179,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       db.project.findFirst({
         where: {
           id: nextProjectId,
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
         },
         select: {
           id: true,
@@ -188,7 +187,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       }),
       db.workspaceMember.findFirst({
         where: {
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
           userId: nextAssigneeId,
         },
         select: {
@@ -245,7 +244,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       await tx.activity.create({
         data: {
           id: crypto.randomUUID(),
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
           userId: access.user.id,
           message:
             result.data.status &&
@@ -301,7 +300,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       where: {
         id: taskId,
         project: {
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
         },
       },
       select: {
@@ -333,7 +332,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       await tx.activity.create({
         data: {
           id: crypto.randomUUID(),
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
           userId: access.user.id,
           message: `deleted task "${existingTask.title}"`,
         },

@@ -5,10 +5,7 @@ import {
 } from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 import { validateCreateTask } from "@/lib/api-validation";
-import {
-  getWorkspaceTasks,
-  PRODUCT_TEAM_WORKSPACE_ID,
-} from "@/lib/workspace-repository";
+import { getWorkspaceTasks } from "@/lib/workspace-repository";
 
 function workspaceAccessRequired() {
   return NextResponse.json(
@@ -99,7 +96,7 @@ export async function POST(request: Request) {
     const project = await db.project.findFirst({
       where: {
         id: result.data.projectId,
-        workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+        workspaceId: access.workspaceId,
       },
       select: {
         id: true,
@@ -120,7 +117,7 @@ export async function POST(request: Request) {
     const assignee = await db.workspaceMember.findUnique({
       where: {
         workspaceId_userId: {
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
           userId: result.data.assigneeId,
         },
       },
@@ -178,7 +175,7 @@ export async function POST(request: Request) {
       await tx.activity.create({
         data: {
           id: crypto.randomUUID(),
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
           userId: access.user.id,
           message: `created task "${createdTask.title}" in ${project.name}`,
         },

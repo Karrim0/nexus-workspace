@@ -5,10 +5,7 @@ import {
 } from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 import { validateCreateProject } from "@/lib/api-validation";
-import {
-  getWorkspaceProjects,
-  PRODUCT_TEAM_WORKSPACE_ID,
-} from "@/lib/workspace-repository";
+import { getWorkspaceProjects } from "@/lib/workspace-repository";
 
 function workspaceAccessRequired() {
   return NextResponse.json(
@@ -97,7 +94,7 @@ export async function POST(request: Request) {
   try {
     const workspace = await db.workspace.findUnique({
       where: {
-        id: PRODUCT_TEAM_WORKSPACE_ID,
+        id: access.workspaceId,
       },
       select: {
         id: true,
@@ -116,7 +113,7 @@ export async function POST(request: Request) {
 
     const validMembers = await db.workspaceMember.findMany({
       where: {
-        workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+        workspaceId: access.workspaceId,
         userId: {
           in: result.data.memberIds,
         },
@@ -151,7 +148,7 @@ export async function POST(request: Request) {
       const createdProject = await tx.project.create({
         data: {
           id: projectId,
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
           name: result.data.name,
           description: result.data.description,
           status: result.data.status,
@@ -172,7 +169,7 @@ export async function POST(request: Request) {
       await tx.activity.create({
         data: {
           id: crypto.randomUUID(),
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
           userId: access.user.id,
           message: `created ${createdProject.name}`,
         },

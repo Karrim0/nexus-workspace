@@ -5,7 +5,6 @@ import {
 } from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 import { validateUpdateMember } from "@/lib/team-validation";
-import { PRODUCT_TEAM_WORKSPACE_ID } from "@/lib/workspace-repository";
 
 type RouteContext = {
   params: Promise<{
@@ -79,7 +78,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   try {
     const membership = await db.workspaceMember.findFirst({
       where: {
-        workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+        workspaceId: access.workspaceId,
         userId: memberId,
       },
       include: {
@@ -141,7 +140,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       const updated = await tx.workspaceMember.update({
         where: {
           workspaceId_userId: {
-            workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+            workspaceId: access.workspaceId,
             userId: memberId,
           },
         },
@@ -154,7 +153,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       await tx.activity.create({
         data: {
           id: crypto.randomUUID(),
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
           userId: access.user.id,
           message: `updated ${membership.user.name}'s workspace access`,
         },
@@ -203,7 +202,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   try {
     const membership = await db.workspaceMember.findFirst({
       where: {
-        workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+        workspaceId: access.workspaceId,
         userId: memberId,
       },
       include: {
@@ -236,7 +235,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
         where: {
           assigneeId: memberId,
           project: {
-            workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+            workspaceId: access.workspaceId,
           },
         },
         data: {
@@ -248,7 +247,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
         where: {
           userId: memberId,
           project: {
-            workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+            workspaceId: access.workspaceId,
           },
         },
       });
@@ -256,7 +255,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       await tx.workspaceMember.delete({
         where: {
           workspaceId_userId: {
-            workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+            workspaceId: access.workspaceId,
             userId: memberId,
           },
         },
@@ -265,7 +264,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
       await tx.activity.create({
         data: {
           id: crypto.randomUUID(),
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
           userId: access.user.id,
           message: `removed ${membership.user.name} from the workspace`,
         },

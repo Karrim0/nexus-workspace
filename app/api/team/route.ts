@@ -5,10 +5,7 @@ import {
 } from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 import { validateInviteMember } from "@/lib/team-validation";
-import {
-  getWorkspaceMembers,
-  PRODUCT_TEAM_WORKSPACE_ID,
-} from "@/lib/workspace-repository";
+import { getWorkspaceMembers } from "@/lib/workspace-repository";
 
 function createInitials(name: string) {
   return name
@@ -127,7 +124,7 @@ export async function POST(request: Request) {
     if (existingUser) {
       const existingMembership = await db.workspaceMember.findFirst({
         where: {
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
           userId: existingUser.id,
         },
         select: {
@@ -148,7 +145,7 @@ export async function POST(request: Request) {
       const membership = await db.$transaction(async (tx) => {
         const createdMembership = await tx.workspaceMember.create({
           data: {
-            workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+            workspaceId: access.workspaceId,
             userId: existingUser.id,
             role: result.data.role,
             status: "Invited",
@@ -158,7 +155,7 @@ export async function POST(request: Request) {
         await tx.activity.create({
           data: {
             id: crypto.randomUUID(),
-            workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+            workspaceId: access.workspaceId,
             userId: access.user.id,
             message: `invited ${existingUser.name} to the workspace`,
           },
@@ -197,7 +194,7 @@ export async function POST(request: Request) {
 
       const membership = await tx.workspaceMember.create({
         data: {
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
           userId: user.id,
           role: result.data.role,
           status: "Invited",
@@ -207,7 +204,7 @@ export async function POST(request: Request) {
       await tx.activity.create({
         data: {
           id: crypto.randomUUID(),
-          workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+          workspaceId: access.workspaceId,
           userId: access.user.id,
           message: `invited ${user.name} to the workspace`,
         },

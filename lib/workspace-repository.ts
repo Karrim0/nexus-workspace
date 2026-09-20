@@ -1,15 +1,6 @@
 import { getCurrentWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 
-/**
- * Temporary compatibility export for mutation routes that have not yet been
- * migrated to dynamic workspace IDs.
- *
- * Repository reads below DO NOT use this constant anymore.
- * Remove this export once Day 14 mutation scoping is complete.
- */
-export const PRODUCT_TEAM_WORKSPACE_ID = "workspace-product-team";
-
 async function resolveWorkspaceId(workspaceId?: string) {
   if (workspaceId) {
     return workspaceId;
