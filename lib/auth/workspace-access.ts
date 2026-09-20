@@ -1,6 +1,5 @@
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { db } from "@/lib/db";
-import { PRODUCT_TEAM_WORKSPACE_ID } from "@/lib/workspace-repository";
 
 export type WorkspaceRole = "owner" | "admin" | "member";
 
@@ -12,6 +11,8 @@ export type WorkspaceAccess = {
     initials: string;
   };
   workspaceId: string;
+  workspaceName: string;
+  workspaceSlug: string;
   role: WorkspaceRole;
   status: string;
 };
@@ -30,10 +31,6 @@ function normalizeWorkspaceRole(role: string): WorkspaceRole {
   return "member";
 }
 
-function isActiveStatus(status: string) {
-  return status.trim().toLowerCase() === "active";
-}
-
 export async function getCurrentWorkspaceAccess(): Promise<WorkspaceAccess | null> {
   const user = await getCurrentUser();
 
@@ -41,26 +38,37 @@ export async function getCurrentWorkspaceAccess(): Promise<WorkspaceAccess | nul
     return null;
   }
 
-  const membership = await db.workspaceMember.findUnique({
+  const membership = await db.workspaceMember.findFirst({
     where: {
-      workspaceId_userId: {
-        workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
-        userId: user.id,
+      userId: user.id,
+      status: {
+        equals: "Active",
+        mode: "insensitive",
       },
     },
-    select: {
-      role: true,
-      status: true,
+    include: {
+      workspace: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+    },
+    orderBy: {
+      id: "asc",
     },
   });
 
-  if (!membership || !isActiveStatus(membership.status)) {
+  if (!membership) {
     return null;
   }
 
   return {
     user,
-    workspaceId: PRODUCT_TEAM_WORKSPACE_ID,
+    workspaceId: membership.workspace.id,
+    workspaceName: membership.workspace.name,
+    workspaceSlug: membership.workspace.slug,
     role: normalizeWorkspaceRole(membership.role),
     status: membership.status,
   };
