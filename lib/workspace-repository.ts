@@ -138,6 +138,59 @@ export async function getWorkspaceTasks(workspaceId?: string) {
   }));
 }
 
+export async function getWorkspaceTaskById(
+  taskId: string,
+  workspaceId?: string
+) {
+  const resolvedWorkspaceId = await resolveWorkspaceId(workspaceId);
+
+  if (!resolvedWorkspaceId) {
+    return null;
+  }
+
+  const task = await db.task.findFirst({
+    where: {
+      id: taskId,
+      project: {
+        workspaceId: resolvedWorkspaceId,
+      },
+    },
+    include: {
+      project: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+        },
+      },
+      assignee: {
+        select: {
+          id: true,
+          name: true,
+          initials: true,
+          email: true,
+        },
+      },
+    },
+  });
+
+  if (!task) {
+    return null;
+  }
+
+  return {
+    id: task.id,
+    title: task.title,
+    priority: task.priority,
+    status: task.status,
+    dueDate: task.dueDate?.toISOString() ?? null,
+    createdAt: task.createdAt.toISOString(),
+    updatedAt: task.updatedAt.toISOString(),
+    project: task.project,
+    assignee: task.assignee,
+  };
+}
+
 export async function getWorkspaceMembers(workspaceId?: string) {
   const resolvedWorkspaceId = await resolveWorkspaceId(workspaceId);
 
