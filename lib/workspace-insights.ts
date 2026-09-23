@@ -5,6 +5,9 @@ type InsightProject = {
 };
 
 type InsightTask = {
+  id: string;
+  title: string;
+  projectId: string;
   assigneeId: string | null;
   priority: string;
   status: string;
@@ -32,14 +35,74 @@ function isActiveMember(status: string) {
   return status.trim().toLowerCase() === "active";
 }
 
-function isOverdue(task: InsightTask, now: Date) {
-  if (!task.dueDate || isDone(task.status)) {
-    return false;
+function parseDueDate(task: InsightTask) {
+  if (!task.dueDate) {
+    return null;
   }
 
   const dueDate = new Date(task.dueDate);
 
-  return !Number.isNaN(dueDate.getTime()) && dueDate.getTime() < now.getTime();
+  return Number.isNaN(dueDate.getTime()) ? null : dueDate;
+}
+
+function isOverdue(task: InsightTask, now: Date) {
+  if (isDone(task.status)) {
+    return false;
+  }
+
+  const dueDate = parseDueDate(task);
+
+  return Boolean(dueDate && dueDate.getTime() < now.getTime());
+}
+
+function isDueSoon(task: InsightTask, now: Date, days = 7) {
+  if (isDone(task.status)) {
+    return false;
+  }
+
+  const dueDate = parseDueDate(task);
+
+  if (!dueDate) {
+    return false;
+  }
+
+  const windowEnd = new Date(
+    now.getTime() + days * 24 * 60 * 60 * 1000
+  );
+
+  return (
+    dueDate.getTime() >= now.getTime() &&
+    dueDate.getTime() <= windowEnd.getTime()
+  );
+}
+
+function isHighPriorityOpen(task: InsightTask) {
+  return (
+    task.priority.trim().toLowerCase() === "high" &&
+    !isDone(task.status)
+  );
+}
+
+function attentionScore(task: InsightTask, now: Date) {
+  let score = 0;
+
+  if (isOverdue(task, now)) {
+    score += 100;
+  }
+
+  if (isHighPriorityOpen(task)) {
+    score += 40;
+  }
+
+  if (isDueSoon(task, now)) {
+    score += 20;
+  }
+
+  if (!task.assigneeId && !isDone(task.status)) {
+    score += 10;
+  }
+
+  return score;
 }
 
 export function buildWorkspaceInsights(
@@ -64,13 +127,17 @@ export function buildWorkspaceInsights(
 
   const overdueTasks = tasks.filter((task) => isOverdue(task, now)).length;
 
-  const highPriorityOpenTasks = tasks.filter(
-    (task) =>
-      task.priority.trim().toLowerCase() === "high" &&
-      !isDone(task.status)
+  const dueSoonTasks = tasks.filter((task) =>
+    isDueSoon(task, now)
   ).length;
 
-  const unassignedTasks = tasks.filter((task) => !task.assigneeId).length;
+  const highPriorityOpenTasks = tasks.filter((task) =>
+    isHighPriorityOpen(task)
+  ).length;
+
+  const unassignedTasks = tasks.filter(
+    (task) => !task.assigneeId && !isDone(task.status)
+  ).length;
 
   const statusDistribution = [
     "Todo",
@@ -97,6 +164,10 @@ export function buildWorkspaceInsights(
         isOverdue(task, now)
       ).length;
 
+      const dueSoon = assigned.filter((task) =>
+        isDueSoon(task, now)
+      ).length;
+
       return {
         id: member.id,
         name: member.name,
@@ -105,6 +176,7 @@ export function buildWorkspaceInsights(
         completed,
         open: assigned.length - completed,
         overdue,
+        dueSoon,
       };
     })
     .sort((a, b) => b.open - a.open || b.assigned - a.assigned);
@@ -113,6 +185,38 @@ export function buildWorkspaceInsights(
     1,
     ...workload.map((member) => member.open)
   );
+
+  const attentionQueue = tasks
+    .filter((task) => attentionScore(task, now) > 0)
+    .map((task) => ({
+      id: task.id,
+      title: task.title,
+      projectId: task.projectId,
+      status: task.status,
+      priority: task.priority,
+      dueDate: task.dueDate,
+      assigneeId: task.assigneeId,
+      overdue: isOverdue(task, now),
+      dueSoon: isDueSoon(task, now),
+      highPriority: isHighPriorityOpen(task),
+      unassigned: !task.assigneeId && !isDone(task.status),
+      score: attentionScore(task, now),
+    }))
+    .sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+
+      const aDue = a.dueDate
+        ? new Date(a.dueDate).getTime()
+        : Number.POSITIVE_INFINITY;
+
+      const bDue = b.dueDate
+        ? new Date(b.dueDate).getTime()
+        : Number.POSITIVE_INFINITY;
+
+      return aDue - bDue;
+    });
 
   return {
     summary: {
@@ -123,11 +227,13 @@ export function buildWorkspaceInsights(
       completedTasks,
       completionRate,
       overdueTasks,
+      dueSoonTasks,
       highPriorityOpenTasks,
       unassignedTasks,
     },
     statusDistribution,
     workload,
     maxOpenWorkload,
+    attentionQueue,
   };
 }

@@ -22,9 +22,9 @@ export async function GET() {
 
   try {
     const [projects, tasks, members] = await Promise.all([
-      getWorkspaceProjects(),
-      getWorkspaceTasks(),
-      getWorkspaceMembers(),
+      getWorkspaceProjects(access.workspaceId),
+      getWorkspaceTasks(access.workspaceId),
+      getWorkspaceMembers(access.workspaceId),
     ]);
 
     const insights = buildWorkspaceInsights({

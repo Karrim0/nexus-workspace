@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { WorkspaceAccessRequired } from "@/components/auth/workspace-access-required";
@@ -11,6 +12,17 @@ import {
 
 export const dynamic = "force-dynamic";
 
+function formatDueDate(value: string | null) {
+  if (!value) {
+    return "No due date";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(value));
+}
+
 export default async function InsightsPage() {
   const access = await getCurrentWorkspaceAccess();
 
@@ -23,7 +35,7 @@ export default async function InsightsPage() {
           <section className="min-w-0 flex-1">
             <Topbar />
 
-            <div className="px-5 py-8 sm:px-8">
+            <div className="px-5 py-8 pb-28 sm:px-8 lg:pb-8">
               <WorkspaceAccessRequired />
             </div>
           </section>
@@ -33,9 +45,9 @@ export default async function InsightsPage() {
   }
 
   const [projects, tasks, members] = await Promise.all([
-    getWorkspaceProjects(),
-    getWorkspaceTasks(),
-    getWorkspaceMembers(),
+    getWorkspaceProjects(access.workspaceId),
+    getWorkspaceTasks(access.workspaceId),
+    getWorkspaceMembers(access.workspaceId),
   ]);
 
   const insights = buildWorkspaceInsights({
@@ -49,6 +61,14 @@ export default async function InsightsPage() {
     ...insights.statusDistribution.map((item) => item.count)
   );
 
+  const projectById = new Map(
+    projects.map((project) => [project.id, project.name])
+  );
+
+  const memberById = new Map(
+    members.map((member) => [member.id, member])
+  );
+
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
       <div className="flex min-h-screen">
@@ -60,7 +80,7 @@ export default async function InsightsPage() {
           <div className="px-5 py-8 pb-28 sm:px-8 lg:pb-8">
             <div>
               <p className="text-sm font-medium text-zinc-500">
-                Workspace
+                {access.workspaceName}
               </p>
 
               <h2 className="mt-1 text-3xl font-semibold tracking-tight">
@@ -69,7 +89,7 @@ export default async function InsightsPage() {
 
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
                 <span>
-                  A live operational view of projects, delivery, and workload.
+                  Delivery health, workload, and tasks that need attention.
                 </span>
 
                 <span className="rounded-full border border-zinc-800 bg-zinc-900 px-2.5 py-1 text-xs font-medium capitalize text-zinc-400">
@@ -91,32 +111,32 @@ export default async function InsightsPage() {
               </article>
 
               <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-                <p className="text-sm text-zinc-500">Active projects</p>
-                <p className="mt-3 text-3xl font-semibold">
-                  {insights.summary.activeProjects}
-                </p>
-                <p className="mt-2 text-xs text-zinc-600">
-                  Current delivery initiatives
-                </p>
-              </article>
-
-              <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
                 <p className="text-sm text-zinc-500">Overdue tasks</p>
                 <p className="mt-3 text-3xl font-semibold">
                   {insights.summary.overdueTasks}
                 </p>
                 <p className="mt-2 text-xs text-zinc-600">
-                  Open tasks past their due date
+                  Open work already past due
                 </p>
               </article>
 
               <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-                <p className="text-sm text-zinc-500">Active members</p>
+                <p className="text-sm text-zinc-500">Due in 7 days</p>
                 <p className="mt-3 text-3xl font-semibold">
-                  {insights.summary.activeMembers}
+                  {insights.summary.dueSoonTasks}
                 </p>
                 <p className="mt-2 text-xs text-zinc-600">
-                  People currently active in the workspace
+                  Upcoming delivery pressure
+                </p>
+              </article>
+
+              <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
+                <p className="text-sm text-zinc-500">Active projects</p>
+                <p className="mt-3 text-3xl font-semibold">
+                  {insights.summary.activeProjects}
+                </p>
+                <p className="mt-2 text-xs text-zinc-600">
+                  Across {insights.summary.activeMembers} active members
                 </p>
               </article>
             </div>
@@ -139,12 +159,100 @@ export default async function InsightsPage() {
               </article>
 
               <article className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-5">
-                <p className="text-sm text-zinc-500">Unassigned tasks</p>
+                <p className="text-sm text-zinc-500">
+                  Unassigned open tasks
+                </p>
                 <p className="mt-3 text-2xl font-semibold">
                   {insights.summary.unassignedTasks}
                 </p>
               </article>
             </div>
+
+            <section className="mt-8 overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/40">
+              <div className="flex flex-col gap-3 border-b border-zinc-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="font-semibold">Needs attention</h3>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Prioritized from overdue, high-priority, due-soon, and
+                    unassigned work
+                  </p>
+                </div>
+
+                <span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-400">
+                  {insights.attentionQueue.length}
+                </span>
+              </div>
+
+              <div className="divide-y divide-zinc-800">
+                {insights.attentionQueue.slice(0, 6).map((task) => {
+                  const assignee = task.assigneeId
+                    ? memberById.get(task.assigneeId)
+                    : null;
+
+                  return (
+                    <Link
+                      key={task.id}
+                      href={`/tasks/${task.id}`}
+                      className="flex flex-col gap-4 px-5 py-5 transition hover:bg-zinc-900/60 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">
+                          {task.title}
+                        </p>
+
+                        <p className="mt-1 truncate text-xs text-zinc-600">
+                          {projectById.get(task.projectId) ?? "Unknown project"}
+                          {" · "}
+                          {assignee?.name ?? "Unassigned"}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        {task.overdue ? (
+                          <span className="rounded-full border border-red-950 bg-red-950/30 px-2.5 py-1 text-red-400">
+                            Overdue
+                          </span>
+                        ) : null}
+
+                        {task.highPriority ? (
+                          <span className="rounded-full border border-zinc-700 px-2.5 py-1 text-zinc-300">
+                            High priority
+                          </span>
+                        ) : null}
+
+                        {task.dueSoon && !task.overdue ? (
+                          <span className="rounded-full border border-amber-950 bg-amber-950/30 px-2.5 py-1 text-amber-300">
+                            Due soon
+                          </span>
+                        ) : null}
+
+                        {task.unassigned ? (
+                          <span className="rounded-full border border-zinc-800 px-2.5 py-1 text-zinc-500">
+                            Unassigned
+                          </span>
+                        ) : null}
+
+                        <span className="text-zinc-600">
+                          {formatDueDate(task.dueDate)}
+                        </span>
+                      </div>
+                    </Link>
+                  );
+                })}
+
+                {insights.attentionQueue.length === 0 ? (
+                  <div className="px-5 py-12 text-center">
+                    <p className="text-sm font-medium text-zinc-400">
+                      Nothing needs immediate attention
+                    </p>
+                    <p className="mt-2 text-xs text-zinc-600">
+                      No overdue, high-priority, due-soon, or unassigned open
+                      tasks right now.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+            </section>
 
             <div className="mt-8 grid gap-6 xl:grid-cols-[0.9fr_1.4fr]">
               <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
@@ -164,6 +272,7 @@ export default async function InsightsPage() {
                           <span className="text-zinc-400">
                             {item.status}
                           </span>
+
                           <span className="font-medium text-white">
                             {item.count}
                           </span>
@@ -185,7 +294,7 @@ export default async function InsightsPage() {
                 <div className="border-b border-zinc-800 px-5 py-4">
                   <h3 className="font-semibold">Team workload</h3>
                   <p className="mt-1 text-xs text-zinc-500">
-                    Open, completed, and overdue tasks by active member
+                    Open, completed, overdue, and due-soon work by active member
                   </p>
                 </div>
 
@@ -209,6 +318,7 @@ export default async function InsightsPage() {
                               <p className="text-sm font-medium">
                                 {member.name}
                               </p>
+
                               <p className="mt-1 text-xs text-zinc-600">
                                 {member.assigned} assigned ·{" "}
                                 {member.completed} completed
@@ -224,6 +334,12 @@ export default async function InsightsPage() {
                             {member.overdue > 0 ? (
                               <span className="rounded-full border border-red-950 bg-red-950/20 px-2.5 py-1 text-red-400">
                                 {member.overdue} overdue
+                              </span>
+                            ) : null}
+
+                            {member.dueSoon > 0 ? (
+                              <span className="rounded-full border border-amber-950 bg-amber-950/20 px-2.5 py-1 text-amber-300">
+                                {member.dueSoon} due soon
                               </span>
                             ) : null}
                           </div>
