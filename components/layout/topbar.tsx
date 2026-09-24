@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { UserMenu } from "@/components/auth/user-menu";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { getCurrentWorkspaceAccess } from "@/lib/auth/workspace-access";
@@ -22,7 +23,7 @@ export async function Topbar() {
             <form
               action="/search"
               method="get"
-              className="hidden sm:block"
+              className="hidden lg:block"
               role="search"
             >
               <label htmlFor="workspace-search" className="sr-only">
@@ -38,13 +39,12 @@ export async function Topbar() {
               />
             </form>
 
-            <a
-              href="/search"
-              className="rounded-xl border border-zinc-800 px-3 py-2 text-sm text-zinc-400 transition hover:bg-zinc-900 hover:text-white sm:hidden"
-              aria-label={`Search ${access.workspaceName}`}
+            <Link
+              href="/inbox"
+              className="rounded-xl border border-zinc-800 px-3 py-2 text-sm font-medium text-zinc-400 transition hover:bg-zinc-900 hover:text-white"
             >
-              Search
-            </a>
+              Inbox
+            </Link>
           </>
         ) : null}
 

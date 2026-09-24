@@ -10,6 +10,7 @@ const protectedPrefixes = [
   "/activity",
   "/search",
   "/insights",
+  "/inbox",
   "/onboarding",
 ];
 
@@ -61,6 +62,7 @@ export const config = {
     "/activity/:path*",
     "/search/:path*",
     "/insights/:path*",
+    "/inbox/:path*",
     "/onboarding/:path*",
     "/login",
     "/signup",
