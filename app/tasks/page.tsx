@@ -23,8 +23,10 @@ const columns = ["Todo", "In Progress", "Review", "Done"] as const;
 type TasksPageProps = {
   searchParams: Promise<{
     q?: string;
+    project?: string;
     priority?: string;
     status?: string;
+    due?: string;
     sort?: string;
   }>;
 };
@@ -43,7 +45,7 @@ export default async function TasksPage({
           <section className="min-w-0 flex-1">
             <Topbar />
 
-            <div className="px-5 py-8 sm:px-8">
+            <div className="px-5 py-8 pb-28 sm:px-8 lg:pb-8">
               <WorkspaceAccessRequired />
             </div>
           </section>
@@ -55,9 +57,9 @@ export default async function TasksPage({
   const params = await searchParams;
 
   const [tasks, projects, members] = await Promise.all([
-    getWorkspaceTasks(),
-    getWorkspaceProjects(),
-    getWorkspaceMembers(),
+    getWorkspaceTasks(access.workspaceId),
+    getWorkspaceProjects(access.workspaceId),
+    getWorkspaceMembers(access.workspaceId),
   ]);
 
   const assignedTasks = tasks.filter(
@@ -66,8 +68,10 @@ export default async function TasksPage({
 
   const visibleTasks = filterAndSortTasks(assignedTasks, {
     query: params.q,
+    projectId: params.project,
     priority: params.priority,
     status: params.status,
+    due: params.due,
     sort: params.sort,
   });
 
@@ -90,8 +94,10 @@ export default async function TasksPage({
 
   const filtersActive = Boolean(
     params.q?.trim() ||
+      (params.project && params.project !== "all") ||
       (params.priority && params.priority !== "all") ||
       (params.status && params.status !== "all") ||
+      (params.due && params.due !== "all") ||
       (params.sort && params.sort !== "due-asc")
   );
 
@@ -138,7 +144,7 @@ export default async function TasksPage({
             <form
               action="/tasks"
               method="get"
-              className="mt-7 grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4 md:grid-cols-[1.3fr_0.8fr_0.8fr_0.9fr_auto]"
+              className="mt-7 grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4 xl:grid-cols-[1.2fr_0.95fr_0.75fr_0.8fr_0.8fr_0.9fr_auto]"
             >
               <div>
                 <label
@@ -156,6 +162,29 @@ export default async function TasksPage({
                   placeholder="Task title..."
                   className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 text-sm text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-zinc-600"
                 />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="task-project"
+                  className="text-xs font-medium text-zinc-500"
+                >
+                  Project
+                </label>
+
+                <select
+                  id="task-project"
+                  name="project"
+                  defaultValue={params.project ?? "all"}
+                  className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 text-sm text-zinc-300 outline-none focus:border-zinc-600"
+                >
+                  <option value="all">All projects</option>
+                  {projectOptions.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -199,6 +228,28 @@ export default async function TasksPage({
                       {status}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="task-due"
+                  className="text-xs font-medium text-zinc-500"
+                >
+                  Due
+                </label>
+
+                <select
+                  id="task-due"
+                  name="due"
+                  defaultValue={params.due ?? "all"}
+                  className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 text-sm text-zinc-300 outline-none focus:border-zinc-600"
+                >
+                  <option value="all">Any due date</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="today">Due today</option>
+                  <option value="upcoming">Upcoming</option>
+                  <option value="no-date">No due date</option>
                 </select>
               </div>
 
