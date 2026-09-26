@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getCurrentWorkspaceAccess } from "@/lib/auth/workspace-access";
 import {
+  crossSiteMutationResponse,
+  isTrustedMutationRequest,
+} from "@/lib/auth/http";
+import {
   createWorkspaceTaskComment,
   getWorkspaceTaskComments,
   validateTaskCommentBody,
@@ -55,6 +59,10 @@ export async function POST(
   request: Request,
   context: RouteContext
 ) {
+  if (!isTrustedMutationRequest(request)) {
+    return crossSiteMutationResponse();
+  }
+
   const access = await getCurrentWorkspaceAccess();
 
   if (!access) {

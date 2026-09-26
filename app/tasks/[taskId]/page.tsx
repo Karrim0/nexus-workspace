@@ -4,10 +4,9 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { WorkspaceAccessRequired } from "@/components/auth/workspace-access-required";
 import { TaskCommentForm } from "@/components/tasks/task-comment-form";
+import { TaskCommentItem } from "@/components/tasks/task-comment-item";
 import { getCurrentWorkspaceAccess } from "@/lib/auth/workspace-access";
-import {
-  getWorkspaceTaskById,
-} from "@/lib/workspace-repository";
+import { getWorkspaceTaskById } from "@/lib/workspace-repository";
 import { getWorkspaceTaskComments } from "@/lib/task-comments";
 
 export const dynamic = "force-dynamic";
@@ -235,36 +234,25 @@ export default async function TaskDetailsPage({
 
                   <div className="divide-y divide-zinc-800">
                     {comments.map((comment) => (
-                      <article
+                      <TaskCommentItem
                         key={comment.id}
-                        className="flex gap-4 px-5 py-5"
-                      >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-800 text-xs font-semibold">
-                          {comment.author.initials}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="text-sm font-medium">
-                              {comment.author.name}
-                            </p>
-
-                            {comment.author.id === access.user.id ? (
-                              <span className="rounded-full border border-zinc-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-zinc-500">
-                                You
-                              </span>
-                            ) : null}
-                          </div>
-
-                          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-zinc-300">
-                            {comment.body}
-                          </p>
-
-                          <p className="mt-3 text-xs text-zinc-600">
-                            {formatDateTime(comment.createdAt)}
-                          </p>
-                        </div>
-                      </article>
+                        taskId={task.id}
+                        comment={{
+                          id: comment.id,
+                          body: comment.body,
+                          authorName: comment.author.name,
+                          authorInitials: comment.author.initials,
+                          createdLabel: formatDateTime(
+                            comment.createdAt
+                          ),
+                          edited:
+                            comment.updatedAt !==
+                            comment.createdAt,
+                          isOwn:
+                            comment.author.id ===
+                            access.user.id,
+                        }}
+                      />
                     ))}
 
                     {comments.length === 0 ? (

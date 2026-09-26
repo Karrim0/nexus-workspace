@@ -147,3 +147,123 @@ export async function createWorkspaceTaskComment(input: {
     author: comment.author,
   };
 }
+
+export async function updateOwnWorkspaceTaskComment(input: {
+  taskId: string;
+  commentId: string;
+  workspaceId: string;
+  authorId: string;
+  body: string;
+}) {
+  const existing = await db.taskComment.findFirst({
+    where: {
+      id: input.commentId,
+      taskId: input.taskId,
+      authorId: input.authorId,
+      task: {
+        project: {
+          workspaceId: input.workspaceId,
+        },
+      },
+    },
+    select: {
+      id: true,
+      task: {
+        select: {
+          title: true,
+        },
+      },
+    },
+  });
+
+  if (!existing) {
+    return null;
+  }
+
+  const [comment] = await db.$transaction([
+    db.taskComment.update({
+      where: {
+        id: existing.id,
+      },
+      data: {
+        body: input.body,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            initials: true,
+            email: true,
+          },
+        },
+      },
+    }),
+    db.activity.create({
+      data: {
+        id: randomUUID(),
+        workspaceId: input.workspaceId,
+        userId: input.authorId,
+        message: `edited a comment on task "${existing.task.title}"`,
+      },
+    }),
+  ]);
+
+  return {
+    id: comment.id,
+    body: comment.body,
+    createdAt: comment.createdAt.toISOString(),
+    updatedAt: comment.updatedAt.toISOString(),
+    author: comment.author,
+  };
+}
+
+export async function deleteOwnWorkspaceTaskComment(input: {
+  taskId: string;
+  commentId: string;
+  workspaceId: string;
+  authorId: string;
+}) {
+  const existing = await db.taskComment.findFirst({
+    where: {
+      id: input.commentId,
+      taskId: input.taskId,
+      authorId: input.authorId,
+      task: {
+        project: {
+          workspaceId: input.workspaceId,
+        },
+      },
+    },
+    select: {
+      id: true,
+      task: {
+        select: {
+          title: true,
+        },
+      },
+    },
+  });
+
+  if (!existing) {
+    return false;
+  }
+
+  await db.$transaction([
+    db.taskComment.delete({
+      where: {
+        id: existing.id,
+      },
+    }),
+    db.activity.create({
+      data: {
+        id: randomUUID(),
+        workspaceId: input.workspaceId,
+        userId: input.authorId,
+        message: `deleted a comment from task "${existing.task.title}"`,
+      },
+    }),
+  ]);
+
+  return true;
+}
