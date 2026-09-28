@@ -84,6 +84,33 @@ model Task {
   project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   assignee   User?         @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   comments   TaskComment[]
+  subtasks   TaskSubtask[]
+  dependencies TaskDependency[] @relation("DependentTask")
+  blockingTasks TaskDependency[] @relation("PrerequisiteTask")
+}
+
+model TaskSubtask {
+  id        String   @id
+  taskId    String
+  title     String
+  completed Boolean  @default(false)
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, position])
+}
+
+model TaskDependency {
+  taskId          String
+  dependsOnTaskId String
+  createdAt       DateTime @default(now())
+  task            Task     @relation("DependentTask", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOn       Task     @relation("PrerequisiteTask", fields: [dependsOnTaskId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, dependsOnTaskId])
+  @@index([dependsOnTaskId])
 }
 
 model TaskComment {

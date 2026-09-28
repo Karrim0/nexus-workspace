@@ -163,6 +163,55 @@ export async function PATCH(request: Request, context: RouteContext) {
       }
     }
 
+    if (result.data.status === "Done" && existingTask.status !== "Done") {
+      const [incompleteSubtasks, incompleteDependencies] = await Promise.all([
+        db.taskSubtask.count({
+          where: {
+            taskId,
+            completed: false,
+          },
+        }),
+        db.taskDependency.count({
+          where: {
+            taskId,
+            dependsOn: {
+              status: {
+                not: "Done",
+              },
+            },
+          },
+        }),
+      ]);
+
+      if (incompleteSubtasks > 0 || incompleteDependencies > 0) {
+        const blockers: string[] = [];
+
+        if (incompleteSubtasks > 0) {
+          blockers.push(
+            `${incompleteSubtasks} incomplete ${
+              incompleteSubtasks === 1 ? "subtask" : "subtasks"
+            }`
+          );
+        }
+
+        if (incompleteDependencies > 0) {
+          blockers.push(
+            `${incompleteDependencies} unfinished ${
+              incompleteDependencies === 1 ? "dependency" : "dependencies"
+            }`
+          );
+        }
+
+        return NextResponse.json(
+          {
+            error: "TASK_COMPLETION_BLOCKED",
+            message: `Complete ${blockers.join(" and ")} before moving this task to Done.`,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const nextProjectId =
       result.data.projectId ?? existingTask.projectId;
     const nextAssigneeId =

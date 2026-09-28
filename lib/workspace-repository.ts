@@ -127,6 +127,22 @@ export async function getWorkspaceTasks(workspaceId?: string) {
         workspaceId: resolvedWorkspaceId,
       },
     },
+    include: {
+      subtasks: {
+        select: {
+          completed: true,
+        },
+      },
+      dependencies: {
+        select: {
+          dependsOn: {
+            select: {
+              status: true,
+            },
+          },
+        },
+      },
+    },
     orderBy: {
       createdAt: "asc",
     },
@@ -140,6 +156,11 @@ export async function getWorkspaceTasks(workspaceId?: string) {
     priority: normalizeTaskPriority(task.priority),
     status: normalizeTaskStatus(task.status),
     dueDate: task.dueDate?.toISOString() ?? null,
+    subtaskCount: task.subtasks.length,
+    completedSubtaskCount: task.subtasks.filter((subtask) => subtask.completed).length,
+    blockingDependencyCount: task.dependencies.filter(
+      (dependency) => normalizeTaskStatus(dependency.dependsOn.status) !== "Done"
+    ).length,
   }));
 }
 
@@ -176,6 +197,46 @@ export async function getWorkspaceTaskById(
           email: true,
         },
       },
+      subtasks: {
+        orderBy: [
+          { position: "asc" },
+          { createdAt: "asc" },
+        ],
+      },
+      dependencies: {
+        include: {
+          dependsOn: {
+            include: {
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
+      blockingTasks: {
+        include: {
+          task: {
+            include: {
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
     },
   });
 
@@ -198,7 +259,68 @@ export async function getWorkspaceTaskById(
       status: normalizeProjectStatus(task.project.status),
     },
     assignee: task.assignee,
+    subtasks: task.subtasks.map((subtask) => ({
+      id: subtask.id,
+      title: subtask.title,
+      completed: subtask.completed,
+      position: subtask.position,
+      createdAt: subtask.createdAt.toISOString(),
+      updatedAt: subtask.updatedAt.toISOString(),
+    })),
+    dependencies: task.dependencies.map((dependency) => ({
+      id: dependency.dependsOn.id,
+      title: dependency.dependsOn.title,
+      status: normalizeTaskStatus(dependency.dependsOn.status),
+      project: dependency.dependsOn.project,
+    })),
+    blockingTasks: task.blockingTasks.map((dependency) => ({
+      id: dependency.task.id,
+      title: dependency.task.title,
+      status: normalizeTaskStatus(dependency.task.status),
+      project: dependency.task.project,
+    })),
   };
+}
+
+export async function getWorkspaceTaskDependencyCandidates(
+  taskId: string,
+  workspaceId?: string
+) {
+  const resolvedWorkspaceId = await resolveWorkspaceId(workspaceId);
+
+  if (!resolvedWorkspaceId) {
+    return [];
+  }
+
+  const tasks = await db.task.findMany({
+    where: {
+      id: {
+        not: taskId,
+      },
+      project: {
+        workspaceId: resolvedWorkspaceId,
+      },
+    },
+    include: {
+      project: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: [
+      { projectId: "asc" },
+      { title: "asc" },
+    ],
+  });
+
+  return tasks.map((task) => ({
+    id: task.id,
+    title: task.title,
+    status: normalizeTaskStatus(task.status),
+    project: task.project,
+  }));
 }
 
 export async function getWorkspaceMembers(workspaceId?: string) {

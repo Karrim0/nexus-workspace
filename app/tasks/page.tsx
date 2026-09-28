@@ -374,6 +374,9 @@ export default async function TasksPage({
                                   priority: task.priority,
                                   status: task.status,
                                   dueDate: task.dueDate,
+                                  subtaskCount: task.subtaskCount,
+                                  completedSubtaskCount: task.completedSubtaskCount,
+                                  blockingDependencyCount: task.blockingDependencyCount,
                                 }}
                                 projectName={
                                   project?.name ?? "Unknown project"
@@ -395,6 +398,9 @@ export default async function TasksPage({
                                 priority: task.priority,
                                 status: task.status,
                                 dueDate: task.dueDate,
+                                subtaskCount: task.subtaskCount,
+                                completedSubtaskCount: task.completedSubtaskCount,
+                                blockingDependencyCount: task.blockingDependencyCount,
                               }}
                               projectName={project?.name ?? "Unknown project"}
                               assigneeName={assignee?.name}

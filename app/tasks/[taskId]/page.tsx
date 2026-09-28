@@ -5,8 +5,17 @@ import { Topbar } from "@/components/layout/topbar";
 import { WorkspaceAccessRequired } from "@/components/auth/workspace-access-required";
 import { TaskCommentForm } from "@/components/tasks/task-comment-form";
 import { TaskCommentItem } from "@/components/tasks/task-comment-item";
-import { getCurrentWorkspaceAccess } from "@/lib/auth/workspace-access";
-import { getWorkspaceTaskById } from "@/lib/workspace-repository";
+import { TaskDependencies } from "@/components/tasks/task-dependencies";
+import { TaskSubtasks } from "@/components/tasks/task-subtasks";
+import {
+  canManageAllTasks,
+  canUpdateAssignedTaskStatus,
+  getCurrentWorkspaceAccess,
+} from "@/lib/auth/workspace-access";
+import {
+  getWorkspaceTaskById,
+  getWorkspaceTaskDependencyCandidates,
+} from "@/lib/workspace-repository";
 import { getWorkspaceTaskComments } from "@/lib/task-comments";
 import { TASK_PRIORITY_META, TASK_STATUS_META } from "@/lib/task-workflow";
 
@@ -80,9 +89,10 @@ export default async function TaskDetailsPage({
 
   const { taskId } = await params;
 
-  const [task, comments] = await Promise.all([
+  const [task, comments, dependencyCandidates] = await Promise.all([
     getWorkspaceTaskById(taskId, access.workspaceId),
     getWorkspaceTaskComments(taskId, access.workspaceId),
+    getWorkspaceTaskDependencyCandidates(taskId, access.workspaceId),
   ]);
 
   if (!task || !comments) {
@@ -90,6 +100,15 @@ export default async function TaskDetailsPage({
   }
 
   const overdue = dueState(task.dueDate, task.status);
+  const incompleteSubtasks = task.subtasks.filter(
+    (subtask) => !subtask.completed
+  ).length;
+  const blockingDependencies = task.dependencies.filter(
+    (dependency) => dependency.status !== "Done"
+  ).length;
+  const canManageStructure =
+    canManageAllTasks(access) ||
+    canUpdateAssignedTaskStatus(access, task.assignee?.id ?? null);
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -134,6 +153,22 @@ export default async function TaskDetailsPage({
                   {overdue ? (
                     <span className="rounded-full border border-red-950 bg-red-950/30 px-3 py-1 text-xs text-red-400">
                       {overdue}
+                    </span>
+                  ) : null}
+
+                  {blockingDependencies > 0 ? (
+                    <span className="rounded-full border border-red-950 bg-red-950/30 px-3 py-1 text-xs text-red-300">
+                      Blocked by {blockingDependencies} {
+                        blockingDependencies === 1 ? "dependency" : "dependencies"
+                      }
+                    </span>
+                  ) : null}
+
+                  {incompleteSubtasks > 0 ? (
+                    <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs text-zinc-400">
+                      {incompleteSubtasks} {
+                        incompleteSubtasks === 1 ? "subtask" : "subtasks"
+                      } remaining
                     </span>
                   ) : null}
                 </div>
@@ -221,6 +256,27 @@ export default async function TaskDetailsPage({
                     </div>
                   </div>
                 </section>
+
+                <TaskSubtasks
+                  taskId={task.id}
+                  taskStatus={task.status}
+                  canManage={canManageStructure}
+                  items={task.subtasks.map((subtask) => ({
+                    id: subtask.id,
+                    title: subtask.title,
+                    completed: subtask.completed,
+                    position: subtask.position,
+                  }))}
+                />
+
+                <TaskDependencies
+                  taskId={task.id}
+                  taskStatus={task.status}
+                  canManage={canManageStructure}
+                  dependencies={task.dependencies}
+                  blockingTasks={task.blockingTasks}
+                  candidates={dependencyCandidates}
+                />
 
                 <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/40">
                   <div className="border-b border-zinc-800 px-5 py-4">

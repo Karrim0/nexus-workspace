@@ -28,6 +28,9 @@ type TaskCardProps = {
     priority: string;
     status: string;
     dueDate: string | null;
+    subtaskCount: number;
+    completedSubtaskCount: number;
+    blockingDependencyCount: number;
   };
   projectName: string;
   assigneeName?: string;
@@ -258,6 +261,21 @@ export function TaskCard({
 
         {error && !editOpen && !deleteOpen ? (
           <p className="mt-2 text-xs text-red-400">{error}</p>
+        ) : null}
+
+        {(task.subtaskCount > 0 || task.blockingDependencyCount > 0) ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {task.subtaskCount > 0 ? (
+              <span className="rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-[10px] text-zinc-500">
+                Checklist {task.completedSubtaskCount}/{task.subtaskCount}
+              </span>
+            ) : null}
+            {task.blockingDependencyCount > 0 ? (
+              <span className="rounded-md border border-red-950 bg-red-950/25 px-2 py-1 text-[10px] text-red-300">
+                Blocked by {task.blockingDependencyCount}
+              </span>
+            ) : null}
+          </div>
         ) : null}
 
         <div className="mt-5 flex items-center justify-between">

@@ -265,3 +265,115 @@ export function validateUpdateTask(
     data,
   };
 }
+
+export type CreateSubtaskInput = {
+  title: string;
+};
+
+export type UpdateSubtaskInput = {
+  title?: string;
+  completed?: boolean;
+};
+
+export type CreateTaskDependencyInput = {
+  dependsOnTaskId: string;
+};
+
+export function validateCreateSubtask(
+  payload: unknown
+): ValidationResult<CreateSubtaskInput> {
+  if (!isRecord(payload)) {
+    return { success: false, errors: ["Request body must be a JSON object."] };
+  }
+
+  const title = typeof payload.title === "string" ? payload.title.trim() : "";
+
+  if (title.length < 2) {
+    return {
+      success: false,
+      errors: ["Subtask title must be at least 2 characters."],
+    };
+  }
+
+  if (title.length > 180) {
+    return {
+      success: false,
+      errors: ["Subtask title must be 180 characters or fewer."],
+    };
+  }
+
+  return {
+    success: true,
+    data: { title },
+  };
+}
+
+export function validateUpdateSubtask(
+  payload: unknown
+): ValidationResult<UpdateSubtaskInput> {
+  if (!isRecord(payload)) {
+    return { success: false, errors: ["Request body must be a JSON object."] };
+  }
+
+  const data: UpdateSubtaskInput = {};
+  const errors: string[] = [];
+  let suppliedFields = 0;
+
+  if ("title" in payload) {
+    suppliedFields += 1;
+    const title = typeof payload.title === "string" ? payload.title.trim() : "";
+
+    if (title.length < 2) {
+      errors.push("Subtask title must be at least 2 characters.");
+    } else if (title.length > 180) {
+      errors.push("Subtask title must be 180 characters or fewer.");
+    } else {
+      data.title = title;
+    }
+  }
+
+  if ("completed" in payload) {
+    suppliedFields += 1;
+
+    if (typeof payload.completed !== "boolean") {
+      errors.push("completed must be a boolean.");
+    } else {
+      data.completed = payload.completed;
+    }
+  }
+
+  if (suppliedFields === 0) {
+    errors.push("Provide at least one subtask field to update.");
+  }
+
+  if (errors.length > 0) {
+    return { success: false, errors };
+  }
+
+  return { success: true, data };
+}
+
+export function validateCreateTaskDependency(
+  payload: unknown
+): ValidationResult<CreateTaskDependencyInput> {
+  if (!isRecord(payload)) {
+    return { success: false, errors: ["Request body must be a JSON object."] };
+  }
+
+  const dependsOnTaskId =
+    typeof payload.dependsOnTaskId === "string"
+      ? payload.dependsOnTaskId.trim()
+      : "";
+
+  if (!dependsOnTaskId) {
+    return {
+      success: false,
+      errors: ["dependsOnTaskId is required."],
+    };
+  }
+
+  return {
+    success: true,
+    data: { dependsOnTaskId },
+  };
+}
