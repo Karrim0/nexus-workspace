@@ -1,4 +1,5 @@
 import { isProjectStatus } from "@/lib/project-lifecycle";
+import { isTaskPriority, isTaskStatus } from "@/lib/task-workflow";
 import type {
   ProjectStatus,
   TaskPriority,
@@ -28,15 +29,6 @@ export type CreateTaskInput = {
 };
 
 export type UpdateTaskInput = Partial<CreateTaskInput>;
-
-const taskPriorities: TaskPriority[] = ["Low", "Medium", "High"];
-
-const taskStatuses: TaskStatus[] = [
-  "Todo",
-  "In Progress",
-  "Review",
-  "Done",
-];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -126,17 +118,11 @@ function validateTaskPayload(
     errors.push("assigneeId is required.");
   }
 
-  if (
-    typeof priority !== "string" ||
-    !taskPriorities.includes(priority as TaskPriority)
-  ) {
+  if (typeof priority !== "string" || !isTaskPriority(priority)) {
     errors.push("Task priority is invalid.");
   }
 
-  if (
-    typeof status !== "string" ||
-    !taskStatuses.includes(status as TaskStatus)
-  ) {
+  if (typeof status !== "string" || !isTaskStatus(status)) {
     errors.push("Task status is invalid.");
   }
 
@@ -233,7 +219,7 @@ export function validateUpdateTask(
 
     if (
       typeof payload.priority !== "string" ||
-      !taskPriorities.includes(payload.priority as TaskPriority)
+      !isTaskPriority(payload.priority)
     ) {
       errors.push("Task priority is invalid.");
     } else {
@@ -246,7 +232,7 @@ export function validateUpdateTask(
 
     if (
       typeof payload.status !== "string" ||
-      !taskStatuses.includes(payload.status as TaskStatus)
+      !isTaskStatus(payload.status)
     ) {
       errors.push("Task status is invalid.");
     } else {

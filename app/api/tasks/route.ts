@@ -4,6 +4,7 @@ import {
   getCurrentWorkspaceAccess,
 } from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
+import { getTaskWorkflowTimestamps } from "@/lib/task-workflow";
 import { validateCreateTask } from "@/lib/api-validation";
 import { getWorkspaceTasks } from "@/lib/workspace-repository";
 
@@ -149,6 +150,11 @@ export async function POST(request: Request) {
     }
 
     const task = await db.$transaction(async (tx) => {
+      const workflowTimestamps = getTaskWorkflowTimestamps(
+        result.data.status,
+        { startedAt: null, completedAt: null }
+      );
+
       const createdTask = await tx.task.create({
         data: {
           id: crypto.randomUUID(),
@@ -158,6 +164,7 @@ export async function POST(request: Request) {
           priority: result.data.priority,
           status: result.data.status,
           dueDate,
+          ...workflowTimestamps,
         },
       });
 

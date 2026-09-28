@@ -10,6 +10,7 @@ import {
   getCurrentWorkspaceAccess,
 } from "@/lib/auth/workspace-access";
 import { filterAndSortTasks } from "@/lib/task-filters";
+import { TASK_PRIORITIES, TASK_STATUSES } from "@/lib/task-workflow";
 import {
   getWorkspaceMembers,
   getWorkspaceProjects,
@@ -18,7 +19,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const columns = ["Todo", "In Progress", "Review", "Done"] as const;
+const columns = TASK_STATUSES;
 
 type TasksPageProps = {
   searchParams: Promise<{
@@ -202,9 +203,11 @@ export default async function TasksPage({
                   className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 text-sm text-zinc-300 outline-none focus:border-zinc-600"
                 >
                   <option value="all">All priorities</option>
-                  <option value="High">High</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Low">Low</option>
+                  {TASK_PRIORITIES.map((priority) => (
+                    <option key={priority} value={priority}>
+                      {priority}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -332,7 +335,7 @@ export default async function TasksPage({
             </div>
 
             <div className="mt-8 overflow-x-auto pb-4">
-              <div className="grid min-w-[1180px] grid-cols-4 gap-5">
+              <div className="grid min-w-[1760px] grid-cols-6 gap-5">
                 {columns.map((column) => {
                   const columnTasks = visibleTasks.filter(
                     (task) => task.status === column

@@ -8,6 +8,7 @@ import { TaskCommentItem } from "@/components/tasks/task-comment-item";
 import { getCurrentWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { getWorkspaceTaskById } from "@/lib/workspace-repository";
 import { getWorkspaceTaskComments } from "@/lib/task-comments";
+import { TASK_PRIORITY_META, TASK_STATUS_META } from "@/lib/task-workflow";
 
 export const dynamic = "force-dynamic";
 
@@ -117,12 +118,17 @@ export default async function TaskDetailsPage({
                 </h2>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-300">
-                    {task.status}
+                  <span
+                    className={`rounded-full border px-3 py-1 text-xs ${TASK_STATUS_META[task.status].tone}`}
+                    title={TASK_STATUS_META[task.status].description}
+                  >
+                    {TASK_STATUS_META[task.status].label}
                   </span>
 
-                  <span className="rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 text-xs text-zinc-400">
-                    {task.priority} priority
+                  <span
+                    className={`rounded-full border px-3 py-1 text-xs ${TASK_PRIORITY_META[task.priority].tone}`}
+                  >
+                    {TASK_PRIORITY_META[task.priority].label} priority
                   </span>
 
                   {overdue ? (
@@ -293,6 +299,24 @@ export default async function TaskDetailsPage({
                     <dt className="text-xs text-zinc-600">Last updated</dt>
                     <dd className="mt-1 text-sm text-zinc-400">
                       {formatDateTime(task.updatedAt)}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt className="text-xs text-zinc-600">Started</dt>
+                    <dd className="mt-1 text-sm text-zinc-400">
+                      {task.startedAt
+                        ? formatDateTime(task.startedAt)
+                        : "Not started"}
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt className="text-xs text-zinc-600">Completed</dt>
+                    <dd className="mt-1 text-sm text-zinc-400">
+                      {task.completedAt
+                        ? formatDateTime(task.completedAt)
+                        : "Not completed"}
                     </dd>
                   </div>
 

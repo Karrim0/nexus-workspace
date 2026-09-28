@@ -4,8 +4,19 @@ export type ProjectStatus =
   | "On Hold"
   | "Completed"
   | "Archived";
-export type TaskStatus = "Todo" | "In Progress" | "Review" | "Done";
-export type TaskPriority = "Low" | "Medium" | "High";
+export type TaskStatus =
+  | "Backlog"
+  | "Todo"
+  | "In Progress"
+  | "Review"
+  | "Blocked"
+  | "Done";
+export type TaskPriority =
+  | "No Priority"
+  | "Low"
+  | "Medium"
+  | "High"
+  | "Urgent";
 export type MemberStatus = "Active" | "Invited";
 
 export type Project = {

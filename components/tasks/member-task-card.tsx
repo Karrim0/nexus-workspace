@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
-const statuses = ["Todo", "In Progress", "Review", "Done"] as const;
+import {
+  TASK_PRIORITY_META,
+  TASK_STATUSES,
+} from "@/lib/task-workflow";
 
 type MemberTaskCardProps = {
   task: {
@@ -76,7 +78,12 @@ export function MemberTaskCard({
       <div className="flex items-start justify-between gap-3">
         <h4 className="text-sm font-medium leading-5">{task.title}</h4>
 
-        <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] text-zinc-400">
+        <span
+          className={`rounded-full border px-2 py-0.5 text-[10px] ${
+            TASK_PRIORITY_META[task.priority as keyof typeof TASK_PRIORITY_META]
+              ?.tone ?? "border-zinc-700 text-zinc-400"
+          }`}
+        >
           {task.priority}
         </span>
       </div>
@@ -98,7 +105,7 @@ export function MemberTaskCard({
           onChange={(event) => updateStatus(event.target.value)}
           className="mt-2 w-full rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-xs text-zinc-300 outline-none transition focus:border-zinc-600 disabled:cursor-wait disabled:opacity-60"
         >
-          {statuses.map((item) => (
+          {TASK_STATUSES.map((item) => (
             <option key={item} value={item}>
               {item}
             </option>

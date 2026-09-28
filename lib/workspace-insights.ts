@@ -1,4 +1,5 @@
 import { isOpenProjectStatus } from "@/lib/project-lifecycle";
+import { TASK_STATUSES } from "@/lib/task-workflow";
 
 type InsightProject = {
   status: string;
@@ -80,7 +81,7 @@ function isDueSoon(task: InsightTask, now: Date, days = 7) {
 
 function isHighPriorityOpen(task: InsightTask) {
   return (
-    task.priority.trim().toLowerCase() === "high" &&
+    ["high", "urgent"].includes(task.priority.trim().toLowerCase()) &&
     !isDone(task.status)
   );
 }
@@ -141,12 +142,7 @@ export function buildWorkspaceInsights(
     (task) => !task.assigneeId && !isDone(task.status)
   ).length;
 
-  const statusDistribution = [
-    "Todo",
-    "In Progress",
-    "Review",
-    "Done",
-  ].map((status) => ({
+  const statusDistribution = TASK_STATUSES.map((status) => ({
     status,
     count: tasks.filter((task) => task.status === status).length,
   }));

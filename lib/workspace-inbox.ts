@@ -89,9 +89,8 @@ export function buildWorkspaceInbox(input: {
       return aDue - bDue;
     });
 
-  const highPriority = assignedOpenTasks.filter(
-    (task) =>
-      task.priority.trim().toLowerCase() === "high"
+  const highPriority = assignedOpenTasks.filter((task) =>
+    ["high", "urgent"].includes(task.priority.trim().toLowerCase())
   );
 
   const recentActivity = input.activity.slice(0, 12);

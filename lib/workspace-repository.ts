@@ -1,6 +1,10 @@
 import { getCurrentWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 import { normalizeProjectStatus } from "@/lib/project-lifecycle";
+import {
+  normalizeTaskPriority,
+  normalizeTaskStatus,
+} from "@/lib/task-workflow";
 
 async function resolveWorkspaceId(workspaceId?: string) {
   if (workspaceId) {
@@ -96,8 +100,8 @@ export async function getWorkspaceProjectById(
     tasks: project.tasks.map((task) => ({
       id: task.id,
       title: task.title,
-      priority: task.priority,
-      status: task.status,
+      priority: normalizeTaskPriority(task.priority),
+      status: normalizeTaskStatus(task.status),
       dueDate: task.dueDate?.toISOString() ?? null,
       assignee: task.assignee
         ? {
@@ -133,8 +137,8 @@ export async function getWorkspaceTasks(workspaceId?: string) {
     title: task.title,
     projectId: task.projectId,
     assigneeId: task.assigneeId,
-    priority: task.priority,
-    status: task.status,
+    priority: normalizeTaskPriority(task.priority),
+    status: normalizeTaskStatus(task.status),
     dueDate: task.dueDate?.toISOString() ?? null,
   }));
 }
@@ -182,9 +186,11 @@ export async function getWorkspaceTaskById(
   return {
     id: task.id,
     title: task.title,
-    priority: task.priority,
-    status: task.status,
+    priority: normalizeTaskPriority(task.priority),
+    status: normalizeTaskStatus(task.status),
     dueDate: task.dueDate?.toISOString() ?? null,
+    startedAt: task.startedAt?.toISOString() ?? null,
+    completedAt: task.completedAt?.toISOString() ?? null,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
     project: {

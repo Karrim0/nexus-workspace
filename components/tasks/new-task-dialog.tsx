@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { TASK_PRIORITIES, TASK_STATUSES } from "@/lib/task-workflow";
 
 type ProjectOption = { id: string; name: string };
 type MemberOption = { id: string; name: string; initials: string };
@@ -184,9 +185,11 @@ export function NewTaskDialog({ projects, members }: Props) {
                     onChange={(e) => setPriority(e.target.value)}
                     className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm"
                   >
-                    <option>Low</option>
-                    <option>Medium</option>
-                    <option>High</option>
+                    {TASK_PRIORITIES.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -197,10 +200,11 @@ export function NewTaskDialog({ projects, members }: Props) {
                     onChange={(e) => setStatus(e.target.value)}
                     className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm"
                   >
-                    <option>Todo</option>
-                    <option>In Progress</option>
-                    <option>Review</option>
-                    <option>Done</option>
+                    {TASK_STATUSES.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

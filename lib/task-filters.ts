@@ -20,9 +20,11 @@ export type TaskDueFilter =
   | "no-date";
 
 const priorityWeight: Record<string, number> = {
+  Urgent: 4,
   High: 3,
   Medium: 2,
   Low: 1,
+  "No Priority": 0,
 };
 
 export function normalizeTaskSort(value?: string): TaskSort {

@@ -6,6 +6,7 @@ import {
   getCurrentWorkspaceAccess,
 } from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
+import { getTaskWorkflowTimestamps } from "@/lib/task-workflow";
 import { validateUpdateTask } from "@/lib/api-validation";
 
 type RouteContext = {
@@ -133,6 +134,8 @@ export async function PATCH(request: Request, context: RouteContext) {
         priority: true,
         status: true,
         dueDate: true,
+        startedAt: true,
+        completedAt: true,
       },
     });
 
@@ -217,6 +220,17 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const updatedTask = await db.$transaction(async (tx) => {
+      const nextStatus = result.data.status ?? existingTask.status;
+      const workflowTimestamps = result.data.status
+        ? getTaskWorkflowTimestamps(result.data.status, {
+            startedAt: existingTask.startedAt,
+            completedAt: existingTask.completedAt,
+          })
+        : {
+            startedAt: existingTask.startedAt,
+            completedAt: existingTask.completedAt,
+          };
+
       const updated = await tx.task.update({
         where: {
           id: taskId,
@@ -226,10 +240,11 @@ export async function PATCH(request: Request, context: RouteContext) {
           projectId: nextProjectId,
           assigneeId: nextAssigneeId,
           priority: result.data.priority ?? existingTask.priority,
-          status: result.data.status ?? existingTask.status,
+          status: nextStatus,
           dueDate: result.data.dueDate
             ? new Date(result.data.dueDate)
             : existingTask.dueDate,
+          ...workflowTimestamps,
         },
       });
 
