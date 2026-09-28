@@ -136,6 +136,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         dueDate: true,
         startedAt: true,
         completedAt: true,
+        milestoneId: true,
       },
     });
 
@@ -288,6 +289,10 @@ export async function PATCH(request: Request, context: RouteContext) {
           title: result.data.title ?? existingTask.title,
           projectId: nextProjectId,
           assigneeId: nextAssigneeId,
+          milestoneId:
+            nextProjectId === existingTask.projectId
+              ? existingTask.milestoneId
+              : null,
           priority: result.data.priority ?? existingTask.priority,
           status: nextStatus,
           dueDate: result.data.dueDate

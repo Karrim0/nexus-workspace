@@ -55,3 +55,28 @@ export type Activity = {
   message: string;
   occurredAt: string;
 };
+
+export type LabelColor =
+  | "slate"
+  | "blue"
+  | "violet"
+  | "emerald"
+  | "amber"
+  | "rose";
+
+export type WorkspaceLabel = {
+  id: string;
+  name: string;
+  color: LabelColor;
+};
+
+export type MilestoneStatus = "Open" | "Completed";
+
+export type ProjectMilestone = {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  status: MilestoneStatus;
+  dueDate: string | null;
+};

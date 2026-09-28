@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { LABEL_COLOR_META, type LabelColor } from "@/lib/task-labels";
 import {
   TASK_PRIORITY_META,
   TASK_STATUSES,
@@ -17,6 +18,8 @@ type MemberTaskCardProps = {
     subtaskCount: number;
     completedSubtaskCount: number;
     blockingDependencyCount: number;
+    milestone: { id: string; title: string; status: string } | null;
+    labels: Array<{ id: string; name: string; color: LabelColor }>;
   };
   projectName: string;
   assigneeName?: string;
@@ -92,6 +95,24 @@ export function MemberTaskCard({
       </div>
 
       <p className="mt-3 text-xs text-zinc-500">{projectName}</p>
+
+      {(task.milestone || task.labels.length > 0) ? (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {task.milestone ? (
+            <span className="rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-[10px] text-zinc-400">
+              ◇ {task.milestone.title}
+            </span>
+          ) : null}
+          {task.labels.map((label) => (
+            <span
+              key={label.id}
+              className={`rounded-md border px-2 py-1 text-[10px] ${LABEL_COLOR_META[label.color].badgeClassName}`}
+            >
+              {label.name}
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       <div className="mt-4">
         <label

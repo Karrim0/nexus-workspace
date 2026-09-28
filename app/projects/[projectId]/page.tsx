@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { ProjectActions } from "@/components/projects/project-actions";
+import { ProjectMilestones } from "@/components/projects/project-milestones";
 import { PROJECT_STATUS_META } from "@/lib/project-lifecycle";
+import { LABEL_COLOR_META } from "@/lib/task-labels";
 import {
   canManageProjects,
   getCurrentWorkspaceAccess,
@@ -155,6 +157,14 @@ export default async function ProjectDetailsPage({
               </article>
             </div>
 
+            <div className="mt-8">
+              <ProjectMilestones
+                projectId={project.id}
+                milestones={project.milestones}
+                canManage={canManage}
+              />
+            </div>
+
             <div className="mt-8 grid gap-6 xl:grid-cols-[1.7fr_1fr]">
               <section className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/40">
                 <div className="border-b border-zinc-800 px-5 py-4">
@@ -176,6 +186,22 @@ export default async function ProjectDetailsPage({
                           <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] text-zinc-400">
                             {task.priority}
                           </span>
+                        </div>
+
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {task.milestone ? (
+                            <span className="rounded-md border border-zinc-800 bg-zinc-950 px-2 py-1 text-[10px] text-zinc-400">
+                              Milestone · {task.milestone.title}
+                            </span>
+                          ) : null}
+                          {task.labels.map((label) => (
+                            <span
+                              key={label.id}
+                              className={`rounded-md border px-2 py-1 text-[10px] ${LABEL_COLOR_META[label.color].badgeClassName}`}
+                            >
+                              {label.name}
+                            </span>
+                          ))}
                         </div>
 
                         <p className="mt-2 text-xs text-zinc-600">

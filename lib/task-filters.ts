@@ -4,6 +4,8 @@ export type TaskFilterItem = {
   priority: string;
   status: string;
   dueDate: string | null;
+  labels?: Array<{ id: string }>;
+  milestone?: { id: string } | null;
 };
 
 export type TaskSort =
@@ -126,6 +128,8 @@ export function filterAndSortTasks<T extends TaskFilterItem>(
     projectId?: string;
     priority?: string;
     status?: string;
+    labelId?: string;
+    milestoneId?: string;
     due?: string;
     sort?: string;
     now?: Date;
@@ -135,6 +139,8 @@ export function filterAndSortTasks<T extends TaskFilterItem>(
   const projectId = options.projectId?.trim() ?? "";
   const priority = options.priority?.trim() ?? "";
   const status = options.status?.trim() ?? "";
+  const labelId = options.labelId?.trim() ?? "";
+  const milestoneId = options.milestoneId?.trim() ?? "";
   const due = normalizeTaskDueFilter(options.due);
   const sort = normalizeTaskSort(options.sort);
   const now = options.now ?? new Date();
@@ -158,11 +164,25 @@ export function filterAndSortTasks<T extends TaskFilterItem>(
       status === "all" ||
       task.status.toLowerCase() === status.toLowerCase();
 
+    const matchesLabel =
+      !labelId ||
+      labelId === "all" ||
+      task.labels?.some((label) => label.id === labelId) === true;
+
+    const matchesMilestone =
+      !milestoneId ||
+      milestoneId === "all" ||
+      (milestoneId === "none"
+        ? !task.milestone
+        : task.milestone?.id === milestoneId);
+
     return (
       matchesQuery &&
       matchesProject &&
       matchesPriority &&
       matchesStatus &&
+      matchesLabel &&
+      matchesMilestone &&
       matchesDueFilter(task, due, now)
     );
   });

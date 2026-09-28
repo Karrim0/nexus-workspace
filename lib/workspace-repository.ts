@@ -1,6 +1,8 @@
 import { getCurrentWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 import { normalizeProjectStatus } from "@/lib/project-lifecycle";
+import { normalizeMilestoneStatus } from "@/lib/milestones";
+import { normalizeLabelColor } from "@/lib/task-labels";
 import {
   normalizeTaskPriority,
   normalizeTaskStatus,
@@ -71,10 +73,29 @@ export async function getWorkspaceProjectById(
       tasks: {
         include: {
           assignee: true,
+          milestone: {
+            select: { id: true, title: true, status: true },
+          },
+          labels: {
+            include: { label: true },
+            orderBy: { createdAt: "asc" },
+          },
         },
         orderBy: {
           createdAt: "asc",
         },
+      },
+      milestones: {
+        include: {
+          tasks: {
+            select: { status: true },
+          },
+        },
+        orderBy: [
+          { status: "asc" },
+          { dueDate: "asc" },
+          { createdAt: "asc" },
+        ],
       },
     },
   });
@@ -110,6 +131,29 @@ export async function getWorkspaceProjectById(
             initials: task.assignee.initials,
           }
         : null,
+      milestone: task.milestone
+        ? {
+            id: task.milestone.id,
+            title: task.milestone.title,
+            status: normalizeMilestoneStatus(task.milestone.status),
+          }
+        : null,
+      labels: task.labels.map(({ label }) => ({
+        id: label.id,
+        name: label.name,
+        color: normalizeLabelColor(label.color),
+      })),
+    })),
+    milestones: project.milestones.map((milestone) => ({
+      id: milestone.id,
+      title: milestone.title,
+      description: milestone.description,
+      status: normalizeMilestoneStatus(milestone.status),
+      dueDate: milestone.dueDate?.toISOString() ?? null,
+      totalTasks: milestone.tasks.length,
+      completedTasks: milestone.tasks.filter(
+        (task) => normalizeTaskStatus(task.status) === "Done"
+      ).length,
     })),
   };
 }
@@ -142,6 +186,13 @@ export async function getWorkspaceTasks(workspaceId?: string) {
           },
         },
       },
+      milestone: {
+        select: { id: true, title: true, status: true },
+      },
+      labels: {
+        include: { label: true },
+        orderBy: { createdAt: "asc" },
+      },
     },
     orderBy: {
       createdAt: "asc",
@@ -161,6 +212,18 @@ export async function getWorkspaceTasks(workspaceId?: string) {
     blockingDependencyCount: task.dependencies.filter(
       (dependency) => normalizeTaskStatus(dependency.dependsOn.status) !== "Done"
     ).length,
+    milestone: task.milestone
+      ? {
+          id: task.milestone.id,
+          title: task.milestone.title,
+          status: normalizeMilestoneStatus(task.milestone.status),
+        }
+      : null,
+    labels: task.labels.map(({ label }) => ({
+      id: label.id,
+      name: label.name,
+      color: normalizeLabelColor(label.color),
+    })),
   }));
 }
 
@@ -196,6 +259,13 @@ export async function getWorkspaceTaskById(
           initials: true,
           email: true,
         },
+      },
+      milestone: {
+        select: { id: true, title: true, status: true, dueDate: true },
+      },
+      labels: {
+        include: { label: true },
+        orderBy: { createdAt: "asc" },
       },
       subtasks: {
         orderBy: [
@@ -259,6 +329,19 @@ export async function getWorkspaceTaskById(
       status: normalizeProjectStatus(task.project.status),
     },
     assignee: task.assignee,
+    milestone: task.milestone
+      ? {
+          id: task.milestone.id,
+          title: task.milestone.title,
+          status: normalizeMilestoneStatus(task.milestone.status),
+          dueDate: task.milestone.dueDate?.toISOString() ?? null,
+        }
+      : null,
+    labels: task.labels.map(({ label }) => ({
+      id: label.id,
+      name: label.name,
+      color: normalizeLabelColor(label.color),
+    })),
     subtasks: task.subtasks.map((subtask) => ({
       id: subtask.id,
       title: subtask.title,
@@ -320,6 +403,81 @@ export async function getWorkspaceTaskDependencyCandidates(
     title: task.title,
     status: normalizeTaskStatus(task.status),
     project: task.project,
+  }));
+}
+
+export async function getWorkspaceLabels(workspaceId?: string) {
+  const resolvedWorkspaceId = await resolveWorkspaceId(workspaceId);
+
+  if (!resolvedWorkspaceId) {
+    return [];
+  }
+
+  const labels = await db.label.findMany({
+    where: { workspaceId: resolvedWorkspaceId },
+    orderBy: { name: "asc" },
+  });
+
+  return labels.map((label) => ({
+    id: label.id,
+    name: label.name,
+    color: normalizeLabelColor(label.color),
+  }));
+}
+
+export async function getWorkspaceMilestones(workspaceId?: string) {
+  const resolvedWorkspaceId = await resolveWorkspaceId(workspaceId);
+
+  if (!resolvedWorkspaceId) {
+    return [];
+  }
+
+  const milestones = await db.milestone.findMany({
+    where: {
+      project: { workspaceId: resolvedWorkspaceId },
+    },
+    include: {
+      project: { select: { id: true, name: true } },
+    },
+    orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "asc" }],
+  });
+
+  return milestones.map((milestone) => ({
+    id: milestone.id,
+    projectId: milestone.projectId,
+    projectName: milestone.project.name,
+    title: milestone.title,
+    description: milestone.description,
+    status: normalizeMilestoneStatus(milestone.status),
+    dueDate: milestone.dueDate?.toISOString() ?? null,
+  }));
+}
+
+export async function getProjectMilestones(
+  projectId: string,
+  workspaceId?: string
+) {
+  const resolvedWorkspaceId = await resolveWorkspaceId(workspaceId);
+
+  if (!resolvedWorkspaceId) {
+    return [];
+  }
+
+  const milestones = await db.milestone.findMany({
+    where: {
+      projectId,
+      project: { workspaceId: resolvedWorkspaceId },
+    },
+    orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "asc" }],
+  });
+
+  return milestones.map((milestone) => ({
+    id: milestone.id,
+    projectId: milestone.projectId,
+    title: milestone.title,
+    description: milestone.description,
+    status: normalizeMilestoneStatus(milestone.status),
+    dueDate: milestone.dueDate?.toISOString() ?? null,
   }));
 }
 

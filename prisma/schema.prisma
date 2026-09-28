@@ -16,6 +16,7 @@ model Workspace {
   members    WorkspaceMember[]
   projects   Project[]
   activities Activity[]
+  labels     Label[]
 }
 
 model User {
@@ -58,6 +59,7 @@ model Project {
   workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   members        ProjectMember[]
   tasks          Task[]
+  milestones     Milestone[]
 }
 
 model ProjectMember {
@@ -70,23 +72,68 @@ model ProjectMember {
 }
 
 model Task {
-  id         String        @id
-  projectId  String
-  assigneeId String?
-  title      String
-  priority   String        @default("Medium")
-  status     String        @default("Todo")
-  dueDate    DateTime?
-  startedAt  DateTime?
-  completedAt DateTime?
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
-  project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assignee   User?         @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  comments   TaskComment[]
-  subtasks   TaskSubtask[]
-  dependencies TaskDependency[] @relation("DependentTask")
+  id            String           @id
+  projectId     String
+  assigneeId    String?
+  milestoneId   String?
+  title         String
+  priority      String           @default("Medium")
+  status        String           @default("Todo")
+  dueDate       DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  project       Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee      User?            @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  milestone     Milestone?       @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  comments      TaskComment[]
+  subtasks      TaskSubtask[]
+  dependencies  TaskDependency[] @relation("DependentTask")
   blockingTasks TaskDependency[] @relation("PrerequisiteTask")
+  labels        TaskLabel[]
+
+  @@index([milestoneId])
+}
+
+model Label {
+  id          String      @id
+  workspaceId String
+  name        String
+  color       String      @default("slate")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  tasks       TaskLabel[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+model TaskLabel {
+  taskId    String
+  labelId   String
+  createdAt DateTime @default(now())
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label     Label    @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, labelId])
+  @@index([labelId])
+}
+
+model Milestone {
+  id          String   @id
+  projectId   String
+  title       String
+  description String   @default("")
+  status      String   @default("Open")
+  dueDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+
+  @@index([projectId, status, dueDate])
 }
 
 model TaskSubtask {

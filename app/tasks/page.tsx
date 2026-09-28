@@ -12,7 +12,9 @@ import {
 import { filterAndSortTasks } from "@/lib/task-filters";
 import { TASK_PRIORITIES, TASK_STATUSES } from "@/lib/task-workflow";
 import {
+  getWorkspaceLabels,
   getWorkspaceMembers,
+  getWorkspaceMilestones,
   getWorkspaceProjects,
   getWorkspaceTasks,
 } from "@/lib/workspace-repository";
@@ -27,6 +29,8 @@ type TasksPageProps = {
     project?: string;
     priority?: string;
     status?: string;
+    label?: string;
+    milestone?: string;
     due?: string;
     sort?: string;
   }>;
@@ -57,10 +61,12 @@ export default async function TasksPage({
 
   const params = await searchParams;
 
-  const [tasks, projects, members] = await Promise.all([
+  const [tasks, projects, members, labels, milestones] = await Promise.all([
     getWorkspaceTasks(access.workspaceId),
     getWorkspaceProjects(access.workspaceId),
     getWorkspaceMembers(access.workspaceId),
+    getWorkspaceLabels(access.workspaceId),
+    getWorkspaceMilestones(access.workspaceId),
   ]);
 
   const assignedTasks = tasks.filter(
@@ -72,6 +78,8 @@ export default async function TasksPage({
     projectId: params.project,
     priority: params.priority,
     status: params.status,
+    labelId: params.label,
+    milestoneId: params.milestone,
     due: params.due,
     sort: params.sort,
   });
@@ -98,6 +106,8 @@ export default async function TasksPage({
       (params.project && params.project !== "all") ||
       (params.priority && params.priority !== "all") ||
       (params.status && params.status !== "all") ||
+      (params.label && params.label !== "all") ||
+      (params.milestone && params.milestone !== "all") ||
       (params.due && params.due !== "all") ||
       (params.sort && params.sort !== "due-asc")
   );
@@ -145,7 +155,7 @@ export default async function TasksPage({
             <form
               action="/tasks"
               method="get"
-              className="mt-7 grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4 xl:grid-cols-[1.2fr_0.95fr_0.75fr_0.8fr_0.8fr_0.9fr_auto]"
+              className="mt-7 grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4 xl:grid-cols-4 2xl:grid-cols-[1.15fr_0.9fr_0.75fr_0.8fr_0.8fr_0.9fr_0.8fr_0.9fr_auto]"
             >
               <div>
                 <label
@@ -229,6 +239,53 @@ export default async function TasksPage({
                   {columns.map((status) => (
                     <option key={status} value={status}>
                       {status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="task-label"
+                  className="text-xs font-medium text-zinc-500"
+                >
+                  Label
+                </label>
+
+                <select
+                  id="task-label"
+                  name="label"
+                  defaultValue={params.label ?? "all"}
+                  className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 text-sm text-zinc-300 outline-none focus:border-zinc-600"
+                >
+                  <option value="all">All labels</option>
+                  {labels.map((label) => (
+                    <option key={label.id} value={label.id}>
+                      {label.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="task-milestone"
+                  className="text-xs font-medium text-zinc-500"
+                >
+                  Milestone
+                </label>
+
+                <select
+                  id="task-milestone"
+                  name="milestone"
+                  defaultValue={params.milestone ?? "all"}
+                  className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 text-sm text-zinc-300 outline-none focus:border-zinc-600"
+                >
+                  <option value="all">All milestones</option>
+                  <option value="none">No milestone</option>
+                  {milestones.map((milestone) => (
+                    <option key={milestone.id} value={milestone.id}>
+                      {milestone.title} · {milestone.projectName}
                     </option>
                   ))}
                 </select>
@@ -377,6 +434,8 @@ export default async function TasksPage({
                                   subtaskCount: task.subtaskCount,
                                   completedSubtaskCount: task.completedSubtaskCount,
                                   blockingDependencyCount: task.blockingDependencyCount,
+                                  milestone: task.milestone,
+                                  labels: task.labels,
                                 }}
                                 projectName={
                                   project?.name ?? "Unknown project"
@@ -401,6 +460,8 @@ export default async function TasksPage({
                                 subtaskCount: task.subtaskCount,
                                 completedSubtaskCount: task.completedSubtaskCount,
                                 blockingDependencyCount: task.blockingDependencyCount,
+                                milestone: task.milestone,
+                                labels: task.labels,
                               }}
                               projectName={project?.name ?? "Unknown project"}
                               assigneeName={assignee?.name}

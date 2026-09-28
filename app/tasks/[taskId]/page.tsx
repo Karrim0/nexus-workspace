@@ -6,6 +6,8 @@ import { WorkspaceAccessRequired } from "@/components/auth/workspace-access-requ
 import { TaskCommentForm } from "@/components/tasks/task-comment-form";
 import { TaskCommentItem } from "@/components/tasks/task-comment-item";
 import { TaskDependencies } from "@/components/tasks/task-dependencies";
+import { TaskLabels } from "@/components/tasks/task-labels";
+import { TaskMilestone } from "@/components/tasks/task-milestone";
 import { TaskSubtasks } from "@/components/tasks/task-subtasks";
 import {
   canManageAllTasks,
@@ -13,6 +15,8 @@ import {
   getCurrentWorkspaceAccess,
 } from "@/lib/auth/workspace-access";
 import {
+  getProjectMilestones,
+  getWorkspaceLabels,
   getWorkspaceTaskById,
   getWorkspaceTaskDependencyCandidates,
 } from "@/lib/workspace-repository";
@@ -89,13 +93,21 @@ export default async function TaskDetailsPage({
 
   const { taskId } = await params;
 
-  const [task, comments, dependencyCandidates] = await Promise.all([
-    getWorkspaceTaskById(taskId, access.workspaceId),
-    getWorkspaceTaskComments(taskId, access.workspaceId),
-    getWorkspaceTaskDependencyCandidates(taskId, access.workspaceId),
-  ]);
+  const task = await getWorkspaceTaskById(taskId, access.workspaceId);
 
-  if (!task || !comments) {
+  if (!task) {
+    notFound();
+  }
+
+  const [comments, dependencyCandidates, workspaceLabels, projectMilestones] =
+    await Promise.all([
+      getWorkspaceTaskComments(taskId, access.workspaceId),
+      getWorkspaceTaskDependencyCandidates(taskId, access.workspaceId),
+      getWorkspaceLabels(access.workspaceId),
+      getProjectMilestones(task.project.id, access.workspaceId),
+    ]);
+
+  if (!comments) {
     notFound();
   }
 
@@ -256,6 +268,21 @@ export default async function TaskDetailsPage({
                     </div>
                   </div>
                 </section>
+
+                <TaskMilestone
+                  taskId={task.id}
+                  milestone={task.milestone}
+                  milestones={projectMilestones}
+                  canManage={canManageStructure}
+                />
+
+                <TaskLabels
+                  taskId={task.id}
+                  labels={task.labels}
+                  availableLabels={workspaceLabels}
+                  canManage={canManageStructure}
+                  canCreateLabels={canManageAllTasks(access)}
+                />
 
                 <TaskSubtasks
                   taskId={task.id}
