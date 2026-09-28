@@ -17,6 +17,7 @@ model Workspace {
   projects   Project[]
   activities Activity[]
   labels     Label[]
+  savedTaskViews SavedTaskView[]
 }
 
 model User {
@@ -31,6 +32,7 @@ model User {
   assignedTasks      Task[]            @relation("TaskAssignee")
   activities         Activity[]
   taskComments       TaskComment[]
+  savedTaskViews     SavedTaskView[]
 }
 
 model WorkspaceMember {
@@ -171,6 +173,28 @@ model TaskComment {
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@index([taskId, createdAt])
+}
+
+model SavedTaskView {
+  id          String    @id
+  workspaceId String
+  userId      String
+  name        String
+  query       String    @default("")
+  projectId   String?
+  priority    String?
+  status      String?
+  labelId     String?
+  milestoneId String?
+  due         String    @default("all")
+  sort        String    @default("due-asc")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId, name])
+  @@index([workspaceId, userId, updatedAt])
 }
 
 model Activity {

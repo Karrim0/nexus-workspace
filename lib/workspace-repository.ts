@@ -535,3 +535,32 @@ export async function getWorkspaceActivity(workspaceId?: string) {
     occurredAt: activity.occurredAt.toISOString(),
   }));
 }
+
+export async function getSavedTaskViews(
+  workspaceId: string,
+  userId: string
+) {
+  const views = await db.savedTaskView.findMany({
+    where: {
+      workspaceId,
+      userId,
+    },
+    orderBy: [
+      { updatedAt: "desc" },
+      { name: "asc" },
+    ],
+  });
+
+  return views.map((view) => ({
+    id: view.id,
+    name: view.name,
+    query: view.query,
+    projectId: view.projectId,
+    priority: view.priority,
+    status: view.status,
+    labelId: view.labelId,
+    milestoneId: view.milestoneId,
+    due: view.due,
+    sort: view.sort,
+  }));
+}

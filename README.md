@@ -16,6 +16,8 @@ This project is being developed incrementally as a full-stack portfolio project,
 - Advanced task workflow with priorities, subtasks, and dependencies
 - Workspace task labels with board filtering
 - Project milestones with task assignment and progress tracking
+- Bulk task actions with permission-aware workflow safeguards
+- Personal saved task views for reusable filters and sorting
 
 ## Planned Features
 

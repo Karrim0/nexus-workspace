@@ -80,3 +80,16 @@ export type ProjectMilestone = {
   status: MilestoneStatus;
   dueDate: string | null;
 };
+
+export type SavedTaskView = {
+  id: string;
+  name: string;
+  query: string;
+  projectId: string | null;
+  priority: string | null;
+  status: string | null;
+  labelId: string | null;
+  milestoneId: string | null;
+  due: string;
+  sort: string;
+};

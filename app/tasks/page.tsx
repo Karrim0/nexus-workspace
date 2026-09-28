@@ -3,15 +3,17 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { WorkspaceAccessRequired } from "@/components/auth/workspace-access-required";
 import { NewTaskDialog } from "@/components/tasks/new-task-dialog";
-import { MemberTaskCard } from "@/components/tasks/member-task-card";
-import { TaskCard } from "@/components/tasks/task-card";
+import { SavedTaskViews } from "@/components/tasks/saved-task-views";
+import { TaskBoard } from "@/components/tasks/task-board";
 import {
   canManageAllTasks,
   getCurrentWorkspaceAccess,
 } from "@/lib/auth/workspace-access";
 import { filterAndSortTasks } from "@/lib/task-filters";
+import { normalizeSavedTaskViewFilters } from "@/lib/saved-task-views";
 import { TASK_PRIORITIES, TASK_STATUSES } from "@/lib/task-workflow";
 import {
+  getSavedTaskViews,
   getWorkspaceLabels,
   getWorkspaceMembers,
   getWorkspaceMilestones,
@@ -61,12 +63,13 @@ export default async function TasksPage({
 
   const params = await searchParams;
 
-  const [tasks, projects, members, labels, milestones] = await Promise.all([
+  const [tasks, projects, members, labels, milestones, savedViews] = await Promise.all([
     getWorkspaceTasks(access.workspaceId),
     getWorkspaceProjects(access.workspaceId),
     getWorkspaceMembers(access.workspaceId),
     getWorkspaceLabels(access.workspaceId),
     getWorkspaceMilestones(access.workspaceId),
+    getSavedTaskViews(access.workspaceId, access.user.id),
   ]);
 
   const assignedTasks = tasks.filter(
@@ -93,6 +96,7 @@ export default async function TasksPage({
     id: member.id,
     name: member.name,
     initials: member.initials,
+    status: member.status,
   }));
 
   const manageAllTasks = canManageAllTasks(access);
@@ -111,6 +115,17 @@ export default async function TasksPage({
       (params.due && params.due !== "all") ||
       (params.sort && params.sort !== "due-asc")
   );
+
+  const currentViewFilters = normalizeSavedTaskViewFilters({
+    query: params.q,
+    projectId: params.project,
+    priority: params.priority,
+    status: params.status,
+    labelId: params.label,
+    milestoneId: params.milestone,
+    due: params.due,
+    sort: params.sort,
+  });
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white">
@@ -151,6 +166,11 @@ export default async function TasksPage({
                 deletion are reserved for admins and owners.
               </div>
             ) : null}
+
+            <SavedTaskViews
+              views={savedViews}
+              currentFilters={currentViewFilters}
+            />
 
             <form
               action="/tasks"
@@ -391,98 +411,12 @@ export default async function TasksPage({
               </article>
             </div>
 
-            <div className="mt-8 overflow-x-auto pb-4">
-              <div className="grid min-w-[1760px] grid-cols-6 gap-5">
-                {columns.map((column) => {
-                  const columnTasks = visibleTasks.filter(
-                    (task) => task.status === column
-                  );
-
-                  return (
-                    <section
-                      key={column}
-                      className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4"
-                    >
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold">{column}</h3>
-
-                        <span className="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-400">
-                          {columnTasks.length}
-                        </span>
-                      </div>
-
-                      <div className="mt-4 space-y-3">
-                        {columnTasks.map((task) => {
-                          const project = projects.find(
-                            (item) => item.id === task.projectId
-                          );
-
-                          const assignee = members.find(
-                            (item) => item.id === task.assigneeId
-                          );
-
-                          if (!manageAllTasks) {
-                            return (
-                              <MemberTaskCard
-                                key={task.id}
-                                task={{
-                                  id: task.id,
-                                  title: task.title,
-                                  priority: task.priority,
-                                  status: task.status,
-                                  dueDate: task.dueDate,
-                                  subtaskCount: task.subtaskCount,
-                                  completedSubtaskCount: task.completedSubtaskCount,
-                                  blockingDependencyCount: task.blockingDependencyCount,
-                                  milestone: task.milestone,
-                                  labels: task.labels,
-                                }}
-                                projectName={
-                                  project?.name ?? "Unknown project"
-                                }
-                                assigneeName={assignee?.name}
-                                assigneeInitials={assignee?.initials}
-                              />
-                            );
-                          }
-
-                          return (
-                            <TaskCard
-                              key={task.id}
-                              task={{
-                                id: task.id,
-                                title: task.title,
-                                projectId: task.projectId,
-                                assigneeId: task.assigneeId,
-                                priority: task.priority,
-                                status: task.status,
-                                dueDate: task.dueDate,
-                                subtaskCount: task.subtaskCount,
-                                completedSubtaskCount: task.completedSubtaskCount,
-                                blockingDependencyCount: task.blockingDependencyCount,
-                                milestone: task.milestone,
-                                labels: task.labels,
-                              }}
-                              projectName={project?.name ?? "Unknown project"}
-                              assigneeName={assignee?.name}
-                              assigneeInitials={assignee?.initials}
-                              projects={projectOptions}
-                              members={allMemberOptions}
-                            />
-                          );
-                        })}
-
-                        {columnTasks.length === 0 ? (
-                          <div className="rounded-xl border border-dashed border-zinc-800 px-4 py-8 text-center text-xs text-zinc-600">
-                            No tasks here
-                          </div>
-                        ) : null}
-                      </div>
-                    </section>
-                  );
-                })}
-              </div>
-            </div>
+            <TaskBoard
+              tasks={visibleTasks}
+              projects={projectOptions}
+              members={allMemberOptions}
+              manageAllTasks={manageAllTasks}
+            />
           </div>
         </section>
       </div>
