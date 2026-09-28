@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { WorkspaceAccessRequired } from "@/components/auth/workspace-access-required";
+import { isOpenProjectStatus } from "@/lib/project-lifecycle";
 import {
   canManageProjects,
   getCurrentWorkspaceAccess,
@@ -43,8 +44,8 @@ export default async function DashboardPage() {
     getWorkspaceActivity(),
   ]);
 
-  const activeProjects = projects.filter(
-    (project) => project.status !== "Completed"
+  const openProjects = projects.filter((project) =>
+    isOpenProjectStatus(project.status)
   );
 
   const openTasks = tasks.filter((task) => task.status !== "Done");
@@ -76,8 +77,8 @@ export default async function DashboardPage() {
 
   const stats = [
     {
-      label: "Active Projects",
-      value: String(activeProjects.length).padStart(2, "0"),
+      label: "Open Projects",
+      value: String(openProjects.length).padStart(2, "0"),
       detail: `${projects.length} total projects`,
     },
     {
@@ -160,14 +161,14 @@ export default async function DashboardPage() {
             <div className="mt-8 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
               <section className="rounded-2xl border border-zinc-800 bg-zinc-900/40">
                 <div className="border-b border-zinc-800 px-5 py-4">
-                  <h3 className="font-semibold">Active Projects</h3>
+                  <h3 className="font-semibold">Open Projects</h3>
                   <p className="mt-1 text-xs text-zinc-500">
                     Current team progress
                   </p>
                 </div>
 
                 <div className="divide-y divide-zinc-800">
-                  {activeProjects.slice(0, 3).map((project) => (
+                  {openProjects.slice(0, 3).map((project) => (
                     <div key={project.id} className="p-5">
                       <div className="flex items-center justify-between gap-4">
                         <div>
@@ -191,9 +192,9 @@ export default async function DashboardPage() {
                     </div>
                   ))}
 
-                  {activeProjects.length === 0 ? (
+                  {openProjects.length === 0 ? (
                     <div className="px-5 py-10 text-center text-sm text-zinc-600">
-                      No active projects yet.
+                      No open projects yet.
                     </div>
                   ) : null}
                 </div>

@@ -131,9 +131,9 @@ export default async function InsightsPage() {
               </article>
 
               <article className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5">
-                <p className="text-sm text-zinc-500">Active projects</p>
+                <p className="text-sm text-zinc-500">Open projects</p>
                 <p className="mt-3 text-3xl font-semibold">
-                  {insights.summary.activeProjects}
+                  {insights.summary.openProjects}
                 </p>
                 <p className="mt-2 text-xs text-zinc-600">
                   Across {insights.summary.activeMembers} active members

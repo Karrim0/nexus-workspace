@@ -171,7 +171,7 @@ export async function POST(request: Request) {
           id: crypto.randomUUID(),
           workspaceId: access.workspaceId,
           userId: access.user.id,
-          message: `created ${createdProject.name}`,
+          message: `created ${createdProject.name} as ${createdProject.status}`,
         },
       });
 

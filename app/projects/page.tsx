@@ -8,6 +8,7 @@ import {
   getCurrentWorkspaceAccess,
 } from "@/lib/auth/workspace-access";
 import { filterAndSortProjects } from "@/lib/project-filters";
+import { PROJECT_STATUSES, PROJECT_STATUS_META } from "@/lib/project-lifecycle";
 import {
   getWorkspaceMembers,
   getWorkspaceProjects,
@@ -60,10 +61,6 @@ export default async function ProjectsPage({
   });
 
   const canManage = canManageProjects(access);
-
-  const statuses = Array.from(
-    new Set(projects.map((project) => project.status))
-  ).sort((a, b) => a.localeCompare(b));
 
   const filtersActive = Boolean(
     params.q?.trim() ||
@@ -156,7 +153,7 @@ export default async function ProjectsPage({
                   className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2.5 text-sm text-zinc-300 outline-none focus:border-zinc-600"
                 >
                   <option value="all">All statuses</option>
-                  {statuses.map((status) => (
+                  {PROJECT_STATUSES.map((status) => (
                     <option key={status} value={status}>
                       {status}
                     </option>
@@ -233,8 +230,10 @@ export default async function ProjectsPage({
                         </p>
                       </div>
 
-                      <span className="shrink-0 rounded-full border border-zinc-700 px-2.5 py-1 text-xs text-zinc-400">
-                        {project.status}
+                      <span
+                        className={`shrink-0 rounded-full border px-2.5 py-1 text-xs ${PROJECT_STATUS_META[project.status].badgeClassName}`}
+                      >
+                        {PROJECT_STATUS_META[project.status].label}
                       </span>
                     </div>
 

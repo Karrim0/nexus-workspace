@@ -1,3 +1,4 @@
+import { isProjectStatus } from "@/lib/project-lifecycle";
 import type {
   ProjectStatus,
   TaskPriority,
@@ -27,12 +28,6 @@ export type CreateTaskInput = {
 };
 
 export type UpdateTaskInput = Partial<CreateTaskInput>;
-
-const projectStatuses: ProjectStatus[] = [
-  "Planning",
-  "In Progress",
-  "Completed",
-];
 
 const taskPriorities: TaskPriority[] = ["Low", "Medium", "High"];
 
@@ -73,10 +68,7 @@ function validateProjectPayload(
     errors.push("Project description must be at least 10 characters.");
   }
 
-  if (
-    typeof status !== "string" ||
-    !projectStatuses.includes(status as ProjectStatus)
-  ) {
+  if (typeof status !== "string" || !isProjectStatus(status)) {
     errors.push("Project status is invalid.");
   }
 

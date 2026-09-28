@@ -1,3 +1,5 @@
+import { compareProjectStatuses } from "@/lib/project-lifecycle";
+
 export type ProjectFilterItem = {
   name: string;
   status: string;
@@ -57,7 +59,7 @@ export function filterAndSortProjects<T extends ProjectFilterItem>(
     }
 
     if (sort === "status") {
-      return a.status.localeCompare(b.status);
+      return compareProjectStatuses(a.status, b.status);
     }
 
     return a.name.localeCompare(b.name);

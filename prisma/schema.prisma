@@ -49,7 +49,7 @@ model Project {
   workspaceId    String
   name           String
   description    String
-  status         String          @default("Planning")
+  status         String          @default("Draft")
   progress       Int             @default(0)
   completedTasks Int             @default(0)
   totalTasks     Int             @default(0)

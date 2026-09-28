@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { ProjectActions } from "@/components/projects/project-actions";
+import { PROJECT_STATUS_META } from "@/lib/project-lifecycle";
 import {
   canManageProjects,
   getCurrentWorkspaceAccess,
@@ -84,8 +85,10 @@ export default async function ProjectDetailsPage({
                     {project.name}
                   </h1>
 
-                  <span className="rounded-full border border-zinc-700 px-3 py-1 text-xs text-zinc-400">
-                    {project.status}
+                  <span
+                    className={`rounded-full border px-3 py-1 text-xs ${PROJECT_STATUS_META[project.status].badgeClassName}`}
+                  >
+                    {PROJECT_STATUS_META[project.status].label}
                   </span>
 
                   {!canManage ? (

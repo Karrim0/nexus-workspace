@@ -2,6 +2,8 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PROJECT_STATUSES, PROJECT_STATUS_META } from "@/lib/project-lifecycle";
+import type { ProjectStatus } from "@/types/workspace";
 
 type MemberOption = {
   id: string;
@@ -14,7 +16,7 @@ type ProjectActionsProps = {
     id: string;
     name: string;
     description: string;
-    status: string;
+    status: ProjectStatus;
     memberIds: string[];
   };
   members: MemberOption[];
@@ -238,13 +240,18 @@ export function ProjectActions({
                 <select
                   id="edit-project-status"
                   value={status}
-                  onChange={(event) => setStatus(event.target.value)}
+                  onChange={(event) => setStatus(event.target.value as ProjectStatus)}
                   className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm outline-none focus:border-zinc-600"
                 >
-                  <option value="Planning">Planning</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Completed">Completed</option>
+                  {PROJECT_STATUSES.map((projectStatus) => (
+                    <option key={projectStatus} value={projectStatus}>
+                      {PROJECT_STATUS_META[projectStatus].label}
+                    </option>
+                  ))}
                 </select>
+                <p className="mt-2 text-xs leading-5 text-zinc-600">
+                  {PROJECT_STATUS_META[status].description}
+                </p>
               </div>
 
               <div>

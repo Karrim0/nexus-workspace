@@ -1,4 +1,9 @@
-export type ProjectStatus = "Planning" | "In Progress" | "Completed";
+export type ProjectStatus =
+  | "Draft"
+  | "Active"
+  | "On Hold"
+  | "Completed"
+  | "Archived";
 export type TaskStatus = "Todo" | "In Progress" | "Review" | "Done";
 export type TaskPriority = "Low" | "Medium" | "High";
 export type MemberStatus = "Active" | "Invited";

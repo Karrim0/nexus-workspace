@@ -1,3 +1,5 @@
+import { isOpenProjectStatus } from "@/lib/project-lifecycle";
+
 type InsightProject = {
   status: string;
   completedTasks: number;
@@ -117,8 +119,8 @@ export function buildWorkspaceInsights(
       ? 0
       : Math.round((completedTasks / tasks.length) * 100);
 
-  const activeProjects = projects.filter(
-    (project) => project.status.trim().toLowerCase() !== "completed"
+  const openProjects = projects.filter((project) =>
+    isOpenProjectStatus(project.status)
   ).length;
 
   const activeMembers = members.filter((member) =>
@@ -220,7 +222,7 @@ export function buildWorkspaceInsights(
 
   return {
     summary: {
-      activeProjects,
+      openProjects,
       activeMembers,
       totalTasks: tasks.length,
       openTasks,

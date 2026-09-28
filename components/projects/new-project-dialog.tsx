@@ -2,6 +2,8 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PROJECT_STATUSES, PROJECT_STATUS_META } from "@/lib/project-lifecycle";
+import type { ProjectStatus } from "@/types/workspace";
 
 type MemberOption = {
   id: string;
@@ -19,7 +21,7 @@ export function NewProjectDialog({ members }: NewProjectDialogProps) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [status, setStatus] = useState("Planning");
+  const [status, setStatus] = useState<ProjectStatus>("Draft");
   const [memberIds, setMemberIds] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -35,7 +37,7 @@ export function NewProjectDialog({ members }: NewProjectDialogProps) {
   function resetForm() {
     setName("");
     setDescription("");
-    setStatus("Planning");
+    setStatus("Draft");
     setMemberIds([]);
     setError("");
   }
@@ -178,13 +180,18 @@ export function NewProjectDialog({ members }: NewProjectDialogProps) {
                 <select
                   id="project-status"
                   value={status}
-                  onChange={(event) => setStatus(event.target.value)}
+                  onChange={(event) => setStatus(event.target.value as ProjectStatus)}
                   className="mt-2 w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm outline-none focus:border-zinc-600"
                 >
-                  <option value="Planning">Planning</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Completed">Completed</option>
+                  {PROJECT_STATUSES.map((projectStatus) => (
+                    <option key={projectStatus} value={projectStatus}>
+                      {PROJECT_STATUS_META[projectStatus].label}
+                    </option>
+                  ))}
                 </select>
+                <p className="mt-2 text-xs leading-5 text-zinc-600">
+                  {PROJECT_STATUS_META[status].description}
+                </p>
               </div>
 
               <div>

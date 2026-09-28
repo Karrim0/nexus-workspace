@@ -1,5 +1,6 @@
 import { getCurrentWorkspaceAccess } from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
+import { normalizeProjectStatus } from "@/lib/project-lifecycle";
 
 async function resolveWorkspaceId(workspaceId?: string) {
   if (workspaceId) {
@@ -35,7 +36,7 @@ export async function getWorkspaceProjects(workspaceId?: string) {
     name: project.name,
     description: project.description,
     progress: project.progress,
-    status: project.status,
+    status: normalizeProjectStatus(project.status),
     completedTasks: project.completedTasks,
     totalTasks: project.totalTasks,
     memberIds: project.members.map((member) => member.userId),
@@ -83,7 +84,7 @@ export async function getWorkspaceProjectById(
     name: project.name,
     description: project.description,
     progress: project.progress,
-    status: project.status,
+    status: normalizeProjectStatus(project.status),
     completedTasks: project.completedTasks,
     totalTasks: project.totalTasks,
     members: project.members.map((membership) => ({
@@ -186,7 +187,10 @@ export async function getWorkspaceTaskById(
     dueDate: task.dueDate?.toISOString() ?? null,
     createdAt: task.createdAt.toISOString(),
     updatedAt: task.updatedAt.toISOString(),
-    project: task.project,
+    project: {
+      ...task.project,
+      status: normalizeProjectStatus(task.project.status),
+    },
     assignee: task.assignee,
   };
 }

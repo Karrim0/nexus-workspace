@@ -5,6 +5,7 @@ import {
 } from "@/lib/auth/workspace-access";
 import { db } from "@/lib/db";
 import { validateUpdateProject } from "@/lib/api-validation";
+import { normalizeProjectStatus } from "@/lib/project-lifecycle";
 
 type RouteContext = {
   params: Promise<{
@@ -80,6 +81,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       select: {
         id: true,
         name: true,
+        status: true,
       },
     });
 
@@ -150,12 +152,17 @@ export async function PATCH(request: Request, context: RouteContext) {
         },
       });
 
+      const previousStatus = normalizeProjectStatus(existingProject.status);
+      const statusChanged = previousStatus !== result.data.status;
+
       await tx.activity.create({
         data: {
           id: crypto.randomUUID(),
           workspaceId: access.workspaceId,
           userId: access.user.id,
-          message: `updated ${updated.name}`,
+          message: statusChanged
+            ? `moved ${updated.name} from ${previousStatus} to ${result.data.status}`
+            : `updated ${updated.name}`,
         },
       });
 
